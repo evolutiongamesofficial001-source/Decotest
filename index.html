@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Gestão de Clientes</title>
+<style>
+:root{--bg:#000;--fg:#fff;--mut:#8a8a8a;--line:#262626;--soft:#111;--ease:cubic-bezier(.2,.8,.2,1)}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--fg);min-height:100vh}
+button,input,select{font:inherit;color:inherit}
+.app{max-width:720px;margin:0 auto;padding:28px 18px 150px}
+h1{font-size:30px;font-weight:700;letter-spacing:-.03em;margin-bottom:20px}
+h2{font-size:28px;font-weight:700;letter-spacing:-.03em}
+h4{font-size:16px;margin:28px 0 12px;color:var(--mut);font-weight:600}
+.btn{background:var(--fg);color:var(--bg);border:1.5px solid var(--fg);border-radius:12px;padding:12px 18px;font-weight:600;cursor:pointer;transition:transform .2s var(--ease),background .2s,color .2s}
+.btn:hover{transform:translateY(-2px)}.btn:active{transform:scale(.96)}
+.btn.out{background:transparent;color:var(--fg);border-color:#444}
+.btn.out:hover{background:var(--fg);color:var(--bg)}
+.btn.sm{padding:8px 14px;font-size:14px;border-radius:10px}
+.btn:disabled{opacity:.5}
+input,select{width:100%;background:var(--soft);border:1.5px solid var(--line);border-radius:12px;padding:13px 14px;outline:0;transition:border-color .2s}
+input:focus,select:focus{border-color:var(--fg)}
+select option{background:#111}
+input[type=date]{color-scheme:dark}
+.search{margin-bottom:16px}
+.card{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1.5px solid var(--line);background:var(--soft);border-radius:16px;padding:16px 18px;margin-bottom:10px;cursor:pointer;transition:border-color .25s,transform .25s var(--ease);animation:in .5s var(--ease) both}
+.card:hover{border-color:var(--fg);transform:translateX(6px)}
+.card:active{transform:scale(.98)}
+.card b{display:block;font-size:17px}.card small{color:var(--mut)}
+.tag{background:var(--fg);color:var(--bg);border-radius:99px;padding:5px 12px;font-size:13px;font-weight:600;white-space:nowrap}
+.tag.zero{background:#1c1c1c;color:var(--mut)}
+@keyframes in{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.view{animation:in .45s var(--ease)}
+.hide{display:none!important}
+.back{background:none;border:0;cursor:pointer;font-weight:600;padding:6px 0;margin-bottom:14px;transition:transform .2s}
+.back:hover{transform:translateX(-4px)}
+.info{margin:16px 0 20px;display:grid;gap:4px;color:var(--mut)}.info span{color:var(--fg)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px}
+.total{display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid var(--fg);padding:16px 0 12px}
+.total strong{font-size:30px;letter-spacing:-.03em}
+.nota{border:1.5px solid var(--line);background:var(--soft);border-radius:16px;padding:16px 18px;margin-bottom:10px;animation:in .45s var(--ease) both;transition:opacity .4s,transform .45s var(--ease),max-height .45s .1s,margin .45s .1s,padding .45s .1s}
+.nota.paid{opacity:0;transform:translateX(60px) scale(.96);max-height:0!important;margin:0;padding:0;overflow:hidden;border-width:0}
+.nota .top{display:flex;justify-content:space-between;gap:10px;margin-bottom:6px}
+.nota .val{font-weight:700;font-size:18px;white-space:nowrap}
+.nota .cli{font-weight:700;display:block;margin-bottom:4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.nota .meta{color:var(--mut);font-size:14px;margin-bottom:12px}
+.late{color:var(--fg);font-weight:700;text-decoration:underline}
+.empty{text-align:center;color:var(--mut);padding:40px 10px;animation:in .5s var(--ease)}
+.link{background:none;border:0;color:var(--mut);cursor:pointer;text-decoration:underline;margin:30px auto 0;display:block}
+.link:hover{color:var(--fg)}
+/* painel */
+.hero{border:1.5px solid var(--fg);border-radius:20px;padding:24px 22px;margin-bottom:12px;animation:in .5s var(--ease) both}
+.hero small,.stat small{color:var(--mut);font-size:14px}
+.hero strong{display:block;font-size:clamp(34px,10vw,52px);letter-spacing:-.04em;margin-top:4px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--soft);border:1.5px solid var(--line);border-radius:16px;padding:16px;animation:in .5s var(--ease) both}
+.stat strong{display:block;font-size:22px;margin-top:4px;letter-spacing:-.02em}
+.bar{margin-bottom:14px;cursor:pointer;animation:in .5s var(--ease) both}
+.bar div.l{display:flex;justify-content:space-between;margin-bottom:6px;font-size:15px}
+.bar i{display:block;height:6px;border-radius:9px;background:#1c1c1c;overflow:hidden}
+.bar i::after{content:"";display:block;height:100%;width:var(--w);background:var(--fg);border-radius:9px;transform-origin:left;animation:grow 1s var(--ease) both}
+@keyframes grow{from{transform:scaleX(0)}}
+.chips{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.chip{border:1.5px solid #333;background:none;border-radius:99px;padding:8px 16px;cursor:pointer;font-size:14px;transition:.25s}
+.chip.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+/* nav */
+nav{position:fixed;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;justify-content:center;gap:4px;padding:10px 10px calc(10px + env(safe-area-inset-bottom));z-index:5}
+nav button{flex:1;max-width:150px;background:none;border:0;border-radius:12px;padding:11px 4px;font-size:14px;font-weight:600;color:var(--mut);cursor:pointer;transition:background .3s,color .3s,transform .2s}
+nav button.on{background:var(--fg);color:var(--bg)}nav button:active{transform:scale(.94)}
+.fab{position:fixed;right:max(18px,calc(50% - 342px));bottom:92px;width:58px;height:58px;border-radius:50%;font-size:30px;padding:0;box-shadow:0 0 0 1px #333,0 10px 30px rgba(255,255,255,.12);z-index:4}
+.fab:hover{transform:rotate(90deg) scale(1.05)}
+/* modais */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s;z-index:10}
+.ov.on{opacity:1;pointer-events:auto}
+.sheet{background:#0c0c0c;border:1px solid #2a2a2a;width:100%;max-width:480px;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:26px 22px 30px;transform:translateY(100%);transition:transform .45s var(--ease)}
+.ov.on .sheet{transform:none}
+@media(min-width:600px){.ov{align-items:center}.sheet{border-radius:24px;transform:translateY(30px) scale(.95);opacity:0;transition:transform .4s var(--ease),opacity .3s}.ov.on .sheet{transform:none;opacity:1}}
+.sheet h3{font-size:21px;margin-bottom:18px;letter-spacing:-.02em}
+.field{margin-bottom:14px}.field label{display:block;font-size:14px;font-weight:600;margin-bottom:6px}
+.row{display:flex;gap:10px;margin-top:8px}.row .btn{flex:1}
+.add{display:grid;grid-template-columns:1fr 70px;gap:8px;margin-bottom:8px}
+.add .btn{grid-column:1/-1}
+.it{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line);animation:in .3s var(--ease)}
+.it button{background:none;border:0;color:var(--mut);cursor:pointer;font-size:20px;padding:0 6px}
+.it button:hover{color:var(--fg)}
+.sum{display:flex;justify-content:space-between;font-weight:700;font-size:18px;margin:14px 0}
+.toast{position:fixed;left:50%;bottom:160px;transform:translate(-50%,30px);background:var(--fg);color:var(--bg);padding:12px 20px;border-radius:99px;font-size:14px;font-weight:600;opacity:0;transition:.35s var(--ease);z-index:20;pointer-events:none;white-space:nowrap}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.load{height:3px;background:var(--fg);position:fixed;top:0;left:0;width:0;transition:width .4s;z-index:30}
+:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="load" id="load"></div>
+<div class="app">
+
+  <section id="painel" class="view">
+    <h1>Painel</h1>
+    <div class="hero"><small>Total em aberto</small><strong id="pTotal">R$ 0,00</strong></div>
+    <div class="grid">
+      <div class="stat" style="animation-delay:.08s"><small>Clientes</small><strong id="pCli">0</strong></div>
+      <div class="stat" style="animation-delay:.14s"><small>Notas abertas</small><strong id="pNotas">0</strong></div>
+      <div class="stat" style="animation-delay:.2s"><small>Atrasado</small><strong id="pAtraso">R$ 0,00</strong></div>
+      <div class="stat" style="animation-delay:.26s"><small>Recebido no mês</small><strong id="pRec">R$ 0,00</strong></div>
+    </div>
+    <h4>Quem mais deve</h4><div id="pTop"></div>
+    <h4>Próximos vencimentos</h4><div id="pProx"></div>
+  </section>
+
+  <section id="lista" class="view hide">
+    <h1>Clientes</h1>
+    <input class="search" id="busca" placeholder="Buscar cliente" type="search">
+    <div id="clientes"></div>
+  </section>
+
+  <section id="anot" class="view hide">
+    <h1>Anotações</h1>
+    <div class="chips" id="chips">
+      <button class="chip on" data-f="todas">Todas</button>
+      <button class="chip" data-f="atrasadas">Atrasadas</button>
+      <button class="chip" data-f="semana">Vencem em 7 dias</button>
+    </div>
+    <div id="todasNotas"></div>
+  </section>
+
+  <section id="prods" class="view hide">
+    <h1>Produtos</h1>
+    <div id="produtos"></div>
+  </section>
+
+  <section id="detalhe" class="view hide">
+    <button class="back" id="voltar">← Voltar</button>
+    <h2 id="dNome"></h2>
+    <div class="info"><div>Telefone: <span id="dTel"></span></div><div>Endereço: <span id="dEnd"></span></div></div>
+    <div class="actions">
+      <button class="btn" id="zap">WhatsApp</button>
+      <button class="btn out" id="editar">Editar</button>
+    </div>
+    <div class="total"><span>Total em aberto</span><strong id="dTotal">R$ 0,00</strong></div>
+    <div id="notas"></div>
+    <button class="btn out" id="novaNota" style="width:100%;margin-top:8px">Adicionar nota</button>
+    <button class="link" id="excluir">Excluir cliente</button>
+  </section>
+</div>
+
+<button class="btn fab" id="fab" aria-label="Adicionar">+</button>
+
+<nav id="nav">
+  <button data-v="painel" class="on">Painel</button>
+  <button data-v="lista">Clientes</button>
+  <button data-v="anot">Anotações</button>
+  <button data-v="prods">Produtos</button>
+</nav>
+
+<!-- Cliente -->
+<div class="ov" id="ovCliente"><form class="sheet" id="fCliente">
+  <h3 id="tCliente">Novo cliente</h3>
+  <div class="field"><label>Nome</label><input id="cNome" required autocomplete="off"></div>
+  <div class="field"><label>Contato (telefone)</label><input id="cTel" type="tel" inputmode="tel" required placeholder="(11) 90000-0000"></div>
+  <div class="field"><label>Endereço (opcional)</label><input id="cEnd" autocomplete="off"></div>
+  <div class="row"><button type="button" class="btn out" data-close>Cancelar</button><button class="btn">Salvar</button></div>
+</form></div>
+
+<!-- Produto -->
+<div class="ov" id="ovProd"><form class="sheet" id="fProd">
+  <h3 id="tProd">Novo produto</h3>
+  <div class="field"><label>Nome do produto</label><input id="pdNome" required autocomplete="off"></div>
+  <div class="field"><label>Preço (R$)</label><input id="pdPreco" type="number" step="0.01" min="0" inputmode="decimal" required></div>
+  <div class="row"><button type="button" class="btn out" data-close>Cancelar</button><button class="btn">Salvar</button></div>
+  <button type="button" class="link" id="delProd">Excluir produto</button>
+</form></div>
+
+<!-- Nota -->
+<div class="ov" id="ovNota"><form class="sheet" id="fNota">
+  <h3>Nova nota</h3>
+  <div class="add">
+    <select id="nSel"></select>
+    <input id="nQtd" type="number" min="1" value="1" inputmode="numeric" aria-label="Quantidade">
+    <input id="aNome" class="hide" placeholder="Nome do item" autocomplete="off">
+    <input id="aPreco" class="hide" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Preço (R$)">
+    <button type="button" class="btn out sm" id="addItem">Adicionar item</button>
+  </div>
+  <div id="itens"></div>
+  <div class="sum"><span>Total</span><span id="nTotal">R$ 0,00</span></div>
+  <div class="field"><label>Vencimento (opcional)</label><input id="nData" type="date"></div>
+  <div class="row"><button type="button" class="btn out" data-close>Cancelar</button><button class="btn">Salvar nota</button></div>
+</form></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DB = 'https://lorena-df029-default-rtdb.firebaseio.com';
+const $ = id => document.getElementById(id);
+let D = {clientes:{}, produtos:{}, pagamentos:{}}, atual = null, aba = 'painel', filtro = 'todas', editCli = null, editProd = null, itensNota = [];
+
+const brl = v => Number(v || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dataBR = d => d.split('-').reverse().join('/');
+const iso = d => d.toISOString().slice(0,10);
+const hoje = () => iso(new Date());
+const em7 = () => iso(new Date(Date.now() + 7*864e5));
+
+async function api(path, method = 'GET', body) {
+  $('load').style.width = '70%';
+  try {
+    const r = await fetch(`${DB}/${path}.json`, {method, headers:{'Content-Type':'application/json'}, body: body === undefined ? undefined : JSON.stringify(body)});
+    if (!r.ok) throw new Error(r.status);
+    return await r.json();
+  } catch (e) { toast('Erro ao conectar. Verifique as regras do banco.'); throw e; }
+  finally { $('load').style.width = '100%'; setTimeout(() => $('load').style.width = '0', 350); }
+}
+function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(t.h); t.h = setTimeout(() => t.classList.remove('on'), 2400); }
+
+async function carregar() {
+  const d = (await api('')) || {};
+  D = {clientes: d.clientes || {}, produtos: d.produtos || {}, pagamentos: d.pagamentos || {}};
+  render();
+}
+const render = () => { renderPainel(); renderLista(); renderAnot(); renderProdutos(); if (atual) renderDetalhe(); };
+
+const todasNotas = () => Object.entries(D.clientes).flatMap(([cid, c]) => Object.entries(c.notas || {}).map(([nid, n]) => ({cid, nid, cliente:c.nome, ...n})));
+const totalDe = c => Object.values(c.notas || {}).reduce((s, n) => s + Number(n.valor || 0), 0);
+const itensTxt = n => Array.isArray(n.itens) ? n.itens.map(i => `${i.qtd}x ${i.nome}`).join(', ') : n.itens;
+
+function contar(el, to) {
+  const t0 = performance.now(), dur = 900;
+  const f = t => { const p = Math.min((t - t0) / dur, 1); el.textContent = el.dataset.m ? brl(to * (1 - Math.pow(1 - p, 3))) : Math.round(to * p); if (p < 1) requestAnimationFrame(f); };
+  requestAnimationFrame(f);
+}
+
+function renderPainel() {
+  const ns = todasNotas(), h = hoje(), semana = em7();
+  const total = ns.reduce((s, n) => s + Number(n.valor), 0);
+  const atraso = ns.filter(n => n.vencimento && n.vencimento < h).reduce((s, n) => s + Number(n.valor), 0);
+  const mes = new Date().toISOString().slice(0, 7);
+  const rec = Object.values(D.pagamentos).filter(p => new Date(p.data).toISOString().slice(0, 7) === mes).reduce((s, p) => s + Number(p.valor), 0);
+  [['pTotal', total, 1], ['pAtraso', atraso, 1], ['pRec', rec, 1], ['pCli', Object.keys(D.clientes).length], ['pNotas', ns.length]].forEach(([id, v, m]) => { const e = $(id); e.dataset.m = m ? 1 : ''; contar(e, v); });
+  const top = Object.entries(D.clientes).map(([id, c]) => ({id, nome:c.nome, t:totalDe(c)})).filter(c => c.t > 0).sort((a, b) => b.t - a.t).slice(0, 5);
+  const max = top[0]?.t || 1;
+  $('pTop').innerHTML = top.length ? top.map((c, i) => `<div class="bar" data-abrir="${c.id}" style="animation-delay:${i*70}ms"><div class="l"><span>${esc(c.nome)}</span><b>${brl(c.t)}</b></div><i style="--w:${c.t / max * 100}%"></i></div>`).join('') : '<div class="empty">Ninguém devendo.</div>';
+  const prox = ns.filter(n => n.vencimento).sort((a, b) => a.vencimento.localeCompare(b.vencimento)).slice(0, 5);
+  $('pProx').innerHTML = prox.length ? prox.map((n, i) => `<div class="card" data-abrir="${n.cid}" style="animation-delay:${i*60}ms"><div><b>${esc(n.cliente)}</b><small class="${n.vencimento < h ? 'late' : ''}">${dataBR(n.vencimento)}${n.vencimento < h ? ' (atrasada)' : ''}</small></div><span class="tag">${brl(n.valor)}</span></div>`).join('') : '<div class="empty">Nenhum vencimento cadastrado.</div>';
+}
+
+function renderLista() {
+  const q = $('busca').value.trim().toLowerCase();
+  const it = Object.entries(D.clientes).filter(([, c]) => c.nome.toLowerCase().includes(q) || (c.telefone || '').includes(q)).sort((a, b) => a[1].nome.localeCompare(b[1].nome));
+  $('clientes').innerHTML = it.length ? it.map(([id, c], i) => { const t = totalDe(c); return `<div class="card" data-abrir="${id}" style="animation-delay:${Math.min(i, 12)*45}ms"><div><b>${esc(c.nome)}</b><small>${esc(c.telefone)}</small></div><span class="tag ${t ? '' : 'zero'}">${t ? brl(t) : 'Em dia'}</span></div>`; }).join('') : `<div class="empty">${q ? 'Nenhum cliente encontrado.' : 'Nenhum cliente ainda.<br>Toque em + para cadastrar.'}</div>`;
+}
+
+function notaHTML(n, i, comCliente) {
+  const atraso = n.vencimento && n.vencimento < hoje();
+  return `<div class="nota" style="animation-delay:${Math.min(i, 10)*60}ms">
+    ${comCliente ? `<span class="cli" data-abrir="${n.cid}">${esc(n.cliente)}</span>` : ''}
+    <div class="top"><span>${esc(itensTxt(n))}</span><span class="val">${brl(n.valor)}</span></div>
+    <div class="meta">${n.vencimento ? `Vence em <span class="${atraso ? 'late' : ''}">${dataBR(n.vencimento)}${atraso ? ' (atrasada)' : ''}</span>` : 'Sem vencimento'}</div>
+    <button class="btn sm" data-pagar="${n.nid}" data-cid="${n.cid}">Marcar como paga</button></div>`;
+}
+const ordenar = ns => ns.sort((a, b) => (a.vencimento || '9999').localeCompare(b.vencimento || '9999'));
+
+function renderDetalhe() {
+  const c = D.clientes[atual]; if (!c) return ir('lista');
+  $('dNome').textContent = c.nome; $('dTel').textContent = c.telefone; $('dEnd').textContent = c.endereco || 'Não informado';
+  $('dTotal').textContent = brl(totalDe(c));
+  const ns = ordenar(todasNotas().filter(n => n.cid === atual));
+  $('notas').innerHTML = ns.length ? ns.map((n, i) => notaHTML(n, i)).join('') : '<div class="empty">Nenhuma nota em aberto.</div>';
+}
+
+function renderAnot() {
+  const h = hoje(), s = em7();
+  let ns = ordenar(todasNotas());
+  if (filtro === 'atrasadas') ns = ns.filter(n => n.vencimento && n.vencimento < h);
+  if (filtro === 'semana') ns = ns.filter(n => n.vencimento && n.vencimento >= h && n.vencimento <= s);
+  $('todasNotas').innerHTML = ns.length ? ns.map((n, i) => notaHTML(n, i, true)).join('') : '<div class="empty">Nenhuma anotação aqui.</div>';
+}
+
+function renderProdutos() {
+  const it = Object.entries(D.produtos).sort((a, b) => a[1].nome.localeCompare(b[1].nome));
+  $('produtos').innerHTML = it.length ? it.map(([id, p], i) => `<div class="card" data-prod="${id}" style="animation-delay:${Math.min(i, 12)*45}ms"><b>${esc(p.nome)}</b><span class="tag">${brl(p.preco)}</span></div>`).join('') : '<div class="empty">Nenhum produto ainda.<br>Toque em + para cadastrar.</div>';
+}
+
+// navegação
+function ir(v) {
+  ['painel','lista','anot','prods','detalhe'].forEach(s => {
+    const el = $(s), on = s === v; el.classList.toggle('hide', !on);
+    if (on) { el.style.animation = 'none'; el.offsetHeight; el.style.animation = ''; }
+  });
+  const tab = v === 'detalhe' ? 'lista' : v; aba = tab;
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === tab));
+  $('fab').classList.toggle('hide', !['lista', 'prods'].includes(v));
+  if (v !== 'detalhe') atual = null;
+  if (v === 'painel') renderPainel();
+  scrollTo(0, 0);
+}
+$('nav').onclick = e => { const b = e.target.closest('button'); if (b) ir(b.dataset.v); };
+const abrirCli = id => { atual = id; renderDetalhe(); ir('detalhe'); atual = id; };
+document.addEventListener('click', e => { const a = e.target.closest('[data-abrir]'); if (a) abrirCli(a.dataset.abrir); });
+$('voltar').onclick = () => ir('lista');
+$('busca').oninput = renderLista;
+$('chips').onclick = e => { const c = e.target.closest('.chip'); if (!c) return; filtro = c.dataset.f; document.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === c)); renderAnot(); };
+
+const abrir = id => $(id).classList.add('on'), fechar = id => $(id).classList.remove('on');
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('.ov').classList.remove('on'));
+document.querySelectorAll('.ov').forEach(o => o.onclick = e => { if (e.target === o) o.classList.remove('on'); });
+
+// FAB contextual
+$('fab').onclick = () => {
+  if (aba === 'prods') { editProd = null; $('tProd').textContent = 'Novo produto'; $('fProd').reset(); $('delProd').classList.add('hide'); abrir('ovProd'); setTimeout(() => $('pdNome').focus(), 300); }
+  else { editCli = null; $('tCliente').textContent = 'Novo cliente'; $('fCliente').reset(); abrir('ovCliente'); setTimeout(() => $('cNome').focus(), 300); }
+};
+
+// Clientes
+$('editar').onclick = () => { const c = D.clientes[atual]; editCli = atual; $('tCliente').textContent = 'Editar cliente'; $('cNome').value = c.nome; $('cTel').value = c.telefone; $('cEnd').value = c.endereco || ''; abrir('ovCliente'); };
+$('fCliente').onsubmit = async e => {
+  e.preventDefault();
+  const d = {nome:$('cNome').value.trim(), telefone:$('cTel').value.trim(), endereco:$('cEnd').value.trim()};
+  if (editCli) await api(`clientes/${editCli}`, 'PATCH', d); else await api('clientes', 'POST', {...d, criado:Date.now()});
+  fechar('ovCliente'); await carregar(); toast(editCli ? 'Cliente atualizado' : 'Cliente cadastrado');
+};
+$('excluir').onclick = async () => { if (!confirm('Excluir este cliente e todas as notas?')) return; await api(`clientes/${atual}`, 'DELETE'); ir('lista'); await carregar(); toast('Cliente excluído'); };
+$('zap').onclick = () => { let n = D.clientes[atual].telefone.replace(/\D/g, ''); if (n.length <= 11) n = '55' + n; open(`https://wa.me/${n}`, '_blank'); };
+
+// Produtos
+$('produtos').onclick = e => { const c = e.target.closest('[data-prod]'); if (!c) return; const p = D.produtos[c.dataset.prod]; editProd = c.dataset.prod; $('tProd').textContent = 'Editar produto'; $('pdNome').value = p.nome; $('pdPreco').value = p.preco; $('delProd').classList.remove('hide'); abrir('ovProd'); };
+$('fProd').onsubmit = async e => {
+  e.preventDefault();
+  const d = {nome:$('pdNome').value.trim(), preco:parseFloat($('pdPreco').value)};
+  if (editProd) await api(`produtos/${editProd}`, 'PATCH', d); else await api('produtos', 'POST', d);
+  fechar('ovProd'); await carregar(); toast('Produto salvo');
+};
+$('delProd').onclick = async () => { if (!confirm('Excluir este produto?')) return; await api(`produtos/${editProd}`, 'DELETE'); fechar('ovProd'); await carregar(); toast('Produto excluído'); };
+
+// Nota
+function desenhaItens() {
+  $('itens').innerHTML = itensNota.map((i, k) => `<div class="it"><span>${i.qtd}x ${esc(i.nome)}</span><span>${brl(i.qtd * i.preco)} <button type="button" data-rm="${k}" aria-label="Remover">×</button></span></div>`).join('');
+  $('nTotal').textContent = brl(itensNota.reduce((s, i) => s + i.qtd * i.preco, 0));
+}
+function opcoes() {
+  $('nSel').innerHTML = Object.entries(D.produtos).sort((a, b) => a[1].nome.localeCompare(b[1].nome)).map(([id, p]) => `<option value="${id}">${esc(p.nome)} — ${brl(p.preco)}</option>`).join('') + '<option value="_">Outro item (avulso)</option>';
+  trocaSel();
+}
+function trocaSel() { const av = $('nSel').value === '_'; $('aNome').classList.toggle('hide', !av); $('aPreco').classList.toggle('hide', !av); }
+$('nSel').onchange = trocaSel;
+$('novaNota').onclick = () => { itensNota = []; $('fNota').reset(); opcoes(); desenhaItens(); abrir('ovNota'); };
+$('addItem').onclick = () => {
+  const qtd = Math.max(1, parseInt($('nQtd').value) || 1); let nome, preco;
+  if ($('nSel').value === '_') { nome = $('aNome').value.trim(); preco = parseFloat($('aPreco').value); if (!nome || isNaN(preco)) return toast('Informe nome e preço'); $('aNome').value = $('aPreco').value = ''; }
+  else { const p = D.produtos[$('nSel').value]; nome = p.nome; preco = Number(p.preco); }
+  itensNota.push({nome, preco, qtd}); $('nQtd').value = 1; desenhaItens();
+};
+$('itens').onclick = e => { const b = e.target.closest('[data-rm]'); if (b) { itensNota.splice(b.dataset.rm, 1); desenhaItens(); } };
+$('fNota').onsubmit = async e => {
+  e.preventDefault();
+  if (!itensNota.length) return toast('Adicione ao menos um item');
+  await api(`clientes/${atual}/notas`, 'POST', {itens:itensNota, valor:itensNota.reduce((s, i) => s + i.qtd * i.preco, 0), vencimento:$('nData').value || '', criado:Date.now()});
+  fechar('ovNota'); await carregar(); toast('Nota adicionada');
+};
+
+// Pagar: apaga a nota e registra o recebimento para o painel
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-pagar]'); if (!b) return;
+  const {cid} = b.dataset, nid = b.dataset.pagar, n = D.clientes[cid].notas[nid], el = b.closest('.nota');
+  b.disabled = true; el.style.maxHeight = el.offsetHeight + 'px'; el.offsetHeight; el.classList.add('paid');
+  await api('pagamentos', 'POST', {cliente:cid, valor:Number(n.valor), data:Date.now()});
+  await api(`clientes/${cid}/notas/${nid}`, 'DELETE');
+  toast('Nota paga e removida'); setTimeout(carregar, 550);
+});
+
+ir('painel');
+carregar().catch(() => { $('pTop').innerHTML = '<div class="empty">Não foi possível carregar.<br>Confira as regras do Firebase.</div>'; });
+</script>
+</body>
+</html>
