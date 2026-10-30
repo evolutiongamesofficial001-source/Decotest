@@ -91,6 +91,37 @@ nav button.on{background:var(--fg);color:var(--bg)}nav button:active{transform:s
 .load{height:3px;background:var(--fg);position:fixed;top:0;left:0;width:0;transition:width .4s;z-index:30}
 :focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* ===== v3 ===== */
+:root{--soft:#0d0d0d;--line:#222}
+body{background:radial-gradient(900px 480px at 50% -160px,#1d1d1d,#000 70%) fixed #000}
+.app{padding-top:34px}
+h1{font-size:34px;margin-bottom:22px}
+.av{width:46px;height:46px;border-radius:50%;background:linear-gradient(145deg,#fff,#8d8d8d);color:#000;display:grid;place-items:center;font-weight:800;font-size:16px;flex:none}
+.av.lg{width:70px;height:70px;font-size:25px;animation:pop .6s var(--ease) both}
+@keyframes pop{from{transform:scale(.4);opacity:0}}
+.card{background:linear-gradient(180deg,#121212,#0a0a0a)}
+.card:hover{box-shadow:0 8px 30px rgba(255,255,255,.07)}
+.card .l{display:flex;align-items:center;gap:14px;min-width:0}
+.hero{background:radial-gradient(400px 160px at 100% 0,#262626,transparent),#0b0b0b;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,.08),transparent 60%);transform:translateX(-100%);animation:shine 4s 1s infinite}
+@keyframes shine{to{transform:translateX(100%)}}
+.head{display:flex;align-items:center;gap:16px;margin-bottom:6px}
+.sec{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin:22px 0 10px;font-weight:700}
+.seg{display:flex;background:#151515;border:1.5px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+.seg button{flex:1;border:0;background:none;border-radius:9px;padding:10px 6px;color:var(--mut);font-weight:600;cursor:pointer;transition:background .25s,color .25s}
+.seg button.on{background:var(--fg);color:#000}
+.chp{display:inline-block;border:1px solid #333;border-radius:99px;padding:4px 11px;font-size:12px;color:#c4c4c4;margin:0 6px 6px 0;animation:in .4s var(--ease) both}
+.nota{cursor:pointer;background:linear-gradient(180deg,#121212,#0a0a0a)}
+.nota:hover{border-color:#555}
+.nn{font-size:12px;letter-spacing:.1em;color:var(--mut);font-weight:700;margin-bottom:6px;display:flex;justify-content:space-between}
+.btns{display:flex;gap:8px}
+.dl{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.dl.big{font-size:20px;font-weight:800;border-bottom:0}
+.box{border:1.5px solid #2c2c2c;border-radius:14px;padding:6px 16px;margin:18px 0 6px;background:#0a0a0a}
+.sheet h3{margin-bottom:6px}.sheet .meta{margin-bottom:12px;color:var(--mut);font-size:14px}
+nav{gap:2px}
+nav button{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;padding:9px 4px}
+nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 </style>
 </head>
 <body>
@@ -108,6 +139,7 @@ nav button.on{background:var(--fg);color:var(--bg)}nav button:active{transform:s
     </div>
     <h4>Quem mais deve</h4><div id="pTop"></div>
     <h4>Próximos vencimentos</h4><div id="pProx"></div>
+    <h4>Recebido por forma (mês)</h4><div id="pForma"></div>
   </section>
 
   <section id="lista" class="view hide">
@@ -127,13 +159,14 @@ nav button.on{background:var(--fg);color:var(--bg)}nav button:active{transform:s
   </section>
 
   <section id="prods" class="view hide">
-    <h1>Produtos</h1>
+    <h1>Meus Produtos</h1>
     <div id="produtos"></div>
   </section>
 
   <section id="detalhe" class="view hide">
     <button class="back" id="voltar">← Voltar</button>
-    <h2 id="dNome"></h2>
+    <div class="head"><div class="av lg" id="dAv"></div><h2 id="dNome"></h2></div>
+    <div id="dChips" style="margin-top:14px"></div>
     <div class="info"><div>Telefone: <span id="dTel"></span></div><div>Endereço: <span id="dEnd"></span></div></div>
     <div class="actions">
       <button class="btn" id="zap">WhatsApp</button>
@@ -148,26 +181,30 @@ nav button.on{background:var(--fg);color:var(--bg)}nav button:active{transform:s
 
 <button class="btn fab" id="fab" aria-label="Adicionar">+</button>
 
-<nav id="nav">
-  <button data-v="painel" class="on">Painel</button>
-  <button data-v="lista">Clientes</button>
-  <button data-v="anot">Anotações</button>
-  <button data-v="prods">Produtos</button>
-</nav>
+<nav id="nav"><button data-v="painel" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Painel</button><button data-v="lista"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M16 4a4 4 0 010 8M22 21c0-3-2-5-4-5.5"/></svg>Clientes</button><button data-v="anot"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg>Anotações</button><button data-v="prods"><svg viewBox="0 0 24 24"><path d="M3 12l9-9h8v8l-9 9z"/><circle cx="15.5" cy="8.5" r="1.3"/></svg>Produtos</button></nav>
 
 <!-- Cliente -->
 <div class="ov" id="ovCliente"><form class="sheet" id="fCliente">
   <h3 id="tCliente">Novo cliente</h3>
+  <div class="sec" style="margin-top:14px">Dados</div>
   <div class="field"><label>Nome</label><input id="cNome" required autocomplete="off"></div>
   <div class="field"><label>Contato (telefone)</label><input id="cTel" type="tel" inputmode="tel" required placeholder="(11) 90000-0000"></div>
   <div class="field"><label>Endereço (opcional)</label><input id="cEnd" autocomplete="off"></div>
-  <div class="row"><button type="button" class="btn out" data-close>Cancelar</button><button class="btn">Salvar</button></div>
+  <div class="sec">Documento (opcional)</div>
+  <div class="seg" id="sgDoc" data-val="CPF"><button type="button" data-v="CPF" class="on">CPF</button><button type="button" data-v="RG">RG</button></div>
+  <div class="field" style="margin-top:10px"><input id="cDoc" placeholder="Número" inputmode="numeric" autocomplete="off"></div>
+  <div class="sec">Compra à vista · desconto (opcional)</div>
+  <div class="seg" id="sgDesc" data-val="none"><button type="button" data-v="none" class="on">Sem desconto</button><button type="button" data-v="%">Porcentagem %</button><button type="button" data-v="R$">Valor R$</button></div>
+  <div class="field hide" id="wDesc" style="margin-top:10px"><input id="cDescVal" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Valor do desconto"></div>
+  <div class="sec">Forma de pagamento</div>
+  <select id="cPag"></select>
+  <div class="row" style="margin-top:20px"><button type="button" class="btn out" data-close>Cancelar</button><button class="btn">Salvar</button></div>
 </form></div>
 
 <!-- Produto -->
 <div class="ov" id="ovProd"><form class="sheet" id="fProd">
   <h3 id="tProd">Novo produto</h3>
-  <div class="field"><label>Nome do produto</label><input id="pdNome" required autocomplete="off"></div>
+  <div class="field" style="margin-top:14px"><label>Nome do produto</label><input id="pdNome" required autocomplete="off"></div>
   <div class="field"><label>Preço (R$)</label><input id="pdPreco" type="number" step="0.01" min="0" inputmode="decimal" required></div>
   <div class="row"><button type="button" class="btn out" data-close>Cancelar</button><button class="btn">Salvar</button></div>
   <button type="button" class="link" id="delProd">Excluir produto</button>
@@ -176,6 +213,7 @@ nav button.on{background:var(--fg);color:var(--bg)}nav button:active{transform:s
 <!-- Nota -->
 <div class="ov" id="ovNota"><form class="sheet" id="fNota">
   <h3>Nova nota</h3>
+  <div class="sec" style="margin-top:14px">Itens</div>
   <div class="add">
     <select id="nSel"></select>
     <input id="nQtd" type="number" min="1" value="1" inputmode="numeric" aria-label="Quantidade">
@@ -184,24 +222,45 @@ nav button.on{background:var(--fg);color:var(--bg)}nav button:active{transform:s
     <button type="button" class="btn out sm" id="addItem">Adicionar item</button>
   </div>
   <div id="itens"></div>
-  <div class="sum"><span>Total</span><span id="nTotal">R$ 0,00</span></div>
-  <div class="field"><label>Vencimento (opcional)</label><input id="nData" type="date"></div>
+  <div class="sec">Forma de pagamento</div>
+  <select id="nPag"></select>
+  <div class="field hide" id="wParc" style="margin-top:10px"><select id="nParc"></select></div>
+  <div class="field hide" id="wObs" style="margin-top:10px"><input id="nObs" placeholder="Descreva a forma de pagamento" autocomplete="off"></div>
+  <div id="wDescN" class="hide">
+    <div class="sec">Desconto à vista</div>
+    <div class="seg" id="sgND" data-val="none"><button type="button" data-v="none" class="on">Sem</button><button type="button" data-v="%">%</button><button type="button" data-v="R$">R$</button></div>
+    <div class="field hide" id="wND" style="margin-top:10px"><input id="nDescVal" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Valor do desconto"></div>
+  </div>
+  <div class="sec">Vencimento (opcional)</div>
+  <input id="nData" type="date">
+  <div class="box" id="resumo"></div>
   <div class="row"><button type="button" class="btn out" data-close>Cancelar</button><button class="btn">Salvar nota</button></div>
 </form></div>
+
+<!-- Detalhe da nota -->
+<div class="ov" id="ovDet"><div class="sheet" id="detBody"></div></div>
 
 <div class="toast" id="toast"></div>
 
 <script>
 const DB = 'https://lorena-df029-default-rtdb.firebaseio.com';
 const $ = id => document.getElementById(id);
-let D = {clientes:{}, produtos:{}, pagamentos:{}}, atual = null, aba = 'painel', filtro = 'todas', editCli = null, editProd = null, itensNota = [];
+const FORMAS = {dinheiro:'Dinheiro', pix:'PIX', cartao_vista:'Cartão à vista', cartao_parcelado:'Cartão parcelado', outros:'Outros'};
+const VISTA = ['dinheiro', 'pix', 'cartao_vista'];
+let D = {clientes:{}, produtos:{}, pagamentos:{}, config:{}}, atual = null, aba = 'painel', filtro = 'todas', editCli = null, editProd = null, itensNota = [], notaAberta = null;
 
 const brl = v => Number(v || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dataBR = d => d.split('-').reverse().join('/');
-const iso = d => d.toISOString().slice(0,10);
+const iso = d => d.toISOString().slice(0, 10);
 const hoje = () => iso(new Date());
 const em7 = () => iso(new Date(Date.now() + 7*864e5));
+const num4 = n => '#' + String(n).padStart(4, '0');
+const inic = s => s.trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+const calcDesc = (sub, d) => !d || !d.valor ? 0 : Math.min(sub, d.tipo === '%' ? sub * d.valor / 100 : d.valor);
+const descTxt = d => d.tipo === '%' ? `${d.valor}%` : brl(d.valor);
+const pagTxt = p => !p ? '' : p.forma === 'cartao_parcelado' && p.parcelas ? `Cartão ${p.parcelas}x` : p.forma === 'outros' && p.obs ? `Outros: ${p.obs}` : FORMAS[p.forma] || '';
+const zapNum = c => { let n = c.telefone.replace(/\D/g, ''); return n.length <= 11 ? '55' + n : n; };
 
 async function api(path, method = 'GET', body) {
   $('load').style.width = '70%';
@@ -216,161 +275,4 @@ function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('on
 
 async function carregar() {
   const d = (await api('')) || {};
-  D = {clientes: d.clientes || {}, produtos: d.produtos || {}, pagamentos: d.pagamentos || {}};
-  render();
-}
-const render = () => { renderPainel(); renderLista(); renderAnot(); renderProdutos(); if (atual) renderDetalhe(); };
-
-const todasNotas = () => Object.entries(D.clientes).flatMap(([cid, c]) => Object.entries(c.notas || {}).map(([nid, n]) => ({cid, nid, cliente:c.nome, ...n})));
-const totalDe = c => Object.values(c.notas || {}).reduce((s, n) => s + Number(n.valor || 0), 0);
-const itensTxt = n => Array.isArray(n.itens) ? n.itens.map(i => `${i.qtd}x ${i.nome}`).join(', ') : n.itens;
-
-function contar(el, to) {
-  const t0 = performance.now(), dur = 900;
-  const f = t => { const p = Math.min((t - t0) / dur, 1); el.textContent = el.dataset.m ? brl(to * (1 - Math.pow(1 - p, 3))) : Math.round(to * p); if (p < 1) requestAnimationFrame(f); };
-  requestAnimationFrame(f);
-}
-
-function renderPainel() {
-  const ns = todasNotas(), h = hoje(), semana = em7();
-  const total = ns.reduce((s, n) => s + Number(n.valor), 0);
-  const atraso = ns.filter(n => n.vencimento && n.vencimento < h).reduce((s, n) => s + Number(n.valor), 0);
-  const mes = new Date().toISOString().slice(0, 7);
-  const rec = Object.values(D.pagamentos).filter(p => new Date(p.data).toISOString().slice(0, 7) === mes).reduce((s, p) => s + Number(p.valor), 0);
-  [['pTotal', total, 1], ['pAtraso', atraso, 1], ['pRec', rec, 1], ['pCli', Object.keys(D.clientes).length], ['pNotas', ns.length]].forEach(([id, v, m]) => { const e = $(id); e.dataset.m = m ? 1 : ''; contar(e, v); });
-  const top = Object.entries(D.clientes).map(([id, c]) => ({id, nome:c.nome, t:totalDe(c)})).filter(c => c.t > 0).sort((a, b) => b.t - a.t).slice(0, 5);
-  const max = top[0]?.t || 1;
-  $('pTop').innerHTML = top.length ? top.map((c, i) => `<div class="bar" data-abrir="${c.id}" style="animation-delay:${i*70}ms"><div class="l"><span>${esc(c.nome)}</span><b>${brl(c.t)}</b></div><i style="--w:${c.t / max * 100}%"></i></div>`).join('') : '<div class="empty">Ninguém devendo.</div>';
-  const prox = ns.filter(n => n.vencimento).sort((a, b) => a.vencimento.localeCompare(b.vencimento)).slice(0, 5);
-  $('pProx').innerHTML = prox.length ? prox.map((n, i) => `<div class="card" data-abrir="${n.cid}" style="animation-delay:${i*60}ms"><div><b>${esc(n.cliente)}</b><small class="${n.vencimento < h ? 'late' : ''}">${dataBR(n.vencimento)}${n.vencimento < h ? ' (atrasada)' : ''}</small></div><span class="tag">${brl(n.valor)}</span></div>`).join('') : '<div class="empty">Nenhum vencimento cadastrado.</div>';
-}
-
-function renderLista() {
-  const q = $('busca').value.trim().toLowerCase();
-  const it = Object.entries(D.clientes).filter(([, c]) => c.nome.toLowerCase().includes(q) || (c.telefone || '').includes(q)).sort((a, b) => a[1].nome.localeCompare(b[1].nome));
-  $('clientes').innerHTML = it.length ? it.map(([id, c], i) => { const t = totalDe(c); return `<div class="card" data-abrir="${id}" style="animation-delay:${Math.min(i, 12)*45}ms"><div><b>${esc(c.nome)}</b><small>${esc(c.telefone)}</small></div><span class="tag ${t ? '' : 'zero'}">${t ? brl(t) : 'Em dia'}</span></div>`; }).join('') : `<div class="empty">${q ? 'Nenhum cliente encontrado.' : 'Nenhum cliente ainda.<br>Toque em + para cadastrar.'}</div>`;
-}
-
-function notaHTML(n, i, comCliente) {
-  const atraso = n.vencimento && n.vencimento < hoje();
-  return `<div class="nota" style="animation-delay:${Math.min(i, 10)*60}ms">
-    ${comCliente ? `<span class="cli" data-abrir="${n.cid}">${esc(n.cliente)}</span>` : ''}
-    <div class="top"><span>${esc(itensTxt(n))}</span><span class="val">${brl(n.valor)}</span></div>
-    <div class="meta">${n.vencimento ? `Vence em <span class="${atraso ? 'late' : ''}">${dataBR(n.vencimento)}${atraso ? ' (atrasada)' : ''}</span>` : 'Sem vencimento'}</div>
-    <button class="btn sm" data-pagar="${n.nid}" data-cid="${n.cid}">Marcar como paga</button></div>`;
-}
-const ordenar = ns => ns.sort((a, b) => (a.vencimento || '9999').localeCompare(b.vencimento || '9999'));
-
-function renderDetalhe() {
-  const c = D.clientes[atual]; if (!c) return ir('lista');
-  $('dNome').textContent = c.nome; $('dTel').textContent = c.telefone; $('dEnd').textContent = c.endereco || 'Não informado';
-  $('dTotal').textContent = brl(totalDe(c));
-  const ns = ordenar(todasNotas().filter(n => n.cid === atual));
-  $('notas').innerHTML = ns.length ? ns.map((n, i) => notaHTML(n, i)).join('') : '<div class="empty">Nenhuma nota em aberto.</div>';
-}
-
-function renderAnot() {
-  const h = hoje(), s = em7();
-  let ns = ordenar(todasNotas());
-  if (filtro === 'atrasadas') ns = ns.filter(n => n.vencimento && n.vencimento < h);
-  if (filtro === 'semana') ns = ns.filter(n => n.vencimento && n.vencimento >= h && n.vencimento <= s);
-  $('todasNotas').innerHTML = ns.length ? ns.map((n, i) => notaHTML(n, i, true)).join('') : '<div class="empty">Nenhuma anotação aqui.</div>';
-}
-
-function renderProdutos() {
-  const it = Object.entries(D.produtos).sort((a, b) => a[1].nome.localeCompare(b[1].nome));
-  $('produtos').innerHTML = it.length ? it.map(([id, p], i) => `<div class="card" data-prod="${id}" style="animation-delay:${Math.min(i, 12)*45}ms"><b>${esc(p.nome)}</b><span class="tag">${brl(p.preco)}</span></div>`).join('') : '<div class="empty">Nenhum produto ainda.<br>Toque em + para cadastrar.</div>';
-}
-
-// navegação
-function ir(v) {
-  ['painel','lista','anot','prods','detalhe'].forEach(s => {
-    const el = $(s), on = s === v; el.classList.toggle('hide', !on);
-    if (on) { el.style.animation = 'none'; el.offsetHeight; el.style.animation = ''; }
-  });
-  const tab = v === 'detalhe' ? 'lista' : v; aba = tab;
-  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === tab));
-  $('fab').classList.toggle('hide', !['lista', 'prods'].includes(v));
-  if (v !== 'detalhe') atual = null;
-  if (v === 'painel') renderPainel();
-  scrollTo(0, 0);
-}
-$('nav').onclick = e => { const b = e.target.closest('button'); if (b) ir(b.dataset.v); };
-const abrirCli = id => { atual = id; renderDetalhe(); ir('detalhe'); atual = id; };
-document.addEventListener('click', e => { const a = e.target.closest('[data-abrir]'); if (a) abrirCli(a.dataset.abrir); });
-$('voltar').onclick = () => ir('lista');
-$('busca').oninput = renderLista;
-$('chips').onclick = e => { const c = e.target.closest('.chip'); if (!c) return; filtro = c.dataset.f; document.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === c)); renderAnot(); };
-
-const abrir = id => $(id).classList.add('on'), fechar = id => $(id).classList.remove('on');
-document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('.ov').classList.remove('on'));
-document.querySelectorAll('.ov').forEach(o => o.onclick = e => { if (e.target === o) o.classList.remove('on'); });
-
-// FAB contextual
-$('fab').onclick = () => {
-  if (aba === 'prods') { editProd = null; $('tProd').textContent = 'Novo produto'; $('fProd').reset(); $('delProd').classList.add('hide'); abrir('ovProd'); setTimeout(() => $('pdNome').focus(), 300); }
-  else { editCli = null; $('tCliente').textContent = 'Novo cliente'; $('fCliente').reset(); abrir('ovCliente'); setTimeout(() => $('cNome').focus(), 300); }
-};
-
-// Clientes
-$('editar').onclick = () => { const c = D.clientes[atual]; editCli = atual; $('tCliente').textContent = 'Editar cliente'; $('cNome').value = c.nome; $('cTel').value = c.telefone; $('cEnd').value = c.endereco || ''; abrir('ovCliente'); };
-$('fCliente').onsubmit = async e => {
-  e.preventDefault();
-  const d = {nome:$('cNome').value.trim(), telefone:$('cTel').value.trim(), endereco:$('cEnd').value.trim()};
-  if (editCli) await api(`clientes/${editCli}`, 'PATCH', d); else await api('clientes', 'POST', {...d, criado:Date.now()});
-  fechar('ovCliente'); await carregar(); toast(editCli ? 'Cliente atualizado' : 'Cliente cadastrado');
-};
-$('excluir').onclick = async () => { if (!confirm('Excluir este cliente e todas as notas?')) return; await api(`clientes/${atual}`, 'DELETE'); ir('lista'); await carregar(); toast('Cliente excluído'); };
-$('zap').onclick = () => { let n = D.clientes[atual].telefone.replace(/\D/g, ''); if (n.length <= 11) n = '55' + n; open(`https://wa.me/${n}`, '_blank'); };
-
-// Produtos
-$('produtos').onclick = e => { const c = e.target.closest('[data-prod]'); if (!c) return; const p = D.produtos[c.dataset.prod]; editProd = c.dataset.prod; $('tProd').textContent = 'Editar produto'; $('pdNome').value = p.nome; $('pdPreco').value = p.preco; $('delProd').classList.remove('hide'); abrir('ovProd'); };
-$('fProd').onsubmit = async e => {
-  e.preventDefault();
-  const d = {nome:$('pdNome').value.trim(), preco:parseFloat($('pdPreco').value)};
-  if (editProd) await api(`produtos/${editProd}`, 'PATCH', d); else await api('produtos', 'POST', d);
-  fechar('ovProd'); await carregar(); toast('Produto salvo');
-};
-$('delProd').onclick = async () => { if (!confirm('Excluir este produto?')) return; await api(`produtos/${editProd}`, 'DELETE'); fechar('ovProd'); await carregar(); toast('Produto excluído'); };
-
-// Nota
-function desenhaItens() {
-  $('itens').innerHTML = itensNota.map((i, k) => `<div class="it"><span>${i.qtd}x ${esc(i.nome)}</span><span>${brl(i.qtd * i.preco)} <button type="button" data-rm="${k}" aria-label="Remover">×</button></span></div>`).join('');
-  $('nTotal').textContent = brl(itensNota.reduce((s, i) => s + i.qtd * i.preco, 0));
-}
-function opcoes() {
-  $('nSel').innerHTML = Object.entries(D.produtos).sort((a, b) => a[1].nome.localeCompare(b[1].nome)).map(([id, p]) => `<option value="${id}">${esc(p.nome)} — ${brl(p.preco)}</option>`).join('') + '<option value="_">Outro item (avulso)</option>';
-  trocaSel();
-}
-function trocaSel() { const av = $('nSel').value === '_'; $('aNome').classList.toggle('hide', !av); $('aPreco').classList.toggle('hide', !av); }
-$('nSel').onchange = trocaSel;
-$('novaNota').onclick = () => { itensNota = []; $('fNota').reset(); opcoes(); desenhaItens(); abrir('ovNota'); };
-$('addItem').onclick = () => {
-  const qtd = Math.max(1, parseInt($('nQtd').value) || 1); let nome, preco;
-  if ($('nSel').value === '_') { nome = $('aNome').value.trim(); preco = parseFloat($('aPreco').value); if (!nome || isNaN(preco)) return toast('Informe nome e preço'); $('aNome').value = $('aPreco').value = ''; }
-  else { const p = D.produtos[$('nSel').value]; nome = p.nome; preco = Number(p.preco); }
-  itensNota.push({nome, preco, qtd}); $('nQtd').value = 1; desenhaItens();
-};
-$('itens').onclick = e => { const b = e.target.closest('[data-rm]'); if (b) { itensNota.splice(b.dataset.rm, 1); desenhaItens(); } };
-$('fNota').onsubmit = async e => {
-  e.preventDefault();
-  if (!itensNota.length) return toast('Adicione ao menos um item');
-  await api(`clientes/${atual}/notas`, 'POST', {itens:itensNota, valor:itensNota.reduce((s, i) => s + i.qtd * i.preco, 0), vencimento:$('nData').value || '', criado:Date.now()});
-  fechar('ovNota'); await carregar(); toast('Nota adicionada');
-};
-
-// Pagar: apaga a nota e registra o recebimento para o painel
-document.addEventListener('click', async e => {
-  const b = e.target.closest('[data-pagar]'); if (!b) return;
-  const {cid} = b.dataset, nid = b.dataset.pagar, n = D.clientes[cid].notas[nid], el = b.closest('.nota');
-  b.disabled = true; el.style.maxHeight = el.offsetHeight + 'px'; el.offsetHeight; el.classList.add('paid');
-  await api('pagamentos', 'POST', {cliente:cid, valor:Number(n.valor), data:Date.now()});
-  await api(`clientes/${cid}/notas/${nid}`, 'DELETE');
-  toast('Nota paga e removida'); setTimeout(carregar, 550);
-});
-
-ir('painel');
-carregar().catch(() => { $('pTop').innerHTML = '<div class="empty">Não foi possível carregar.<br>Confira as regras do Firebase.</div>'; });
-</script>
-</body>
-</html>
+  D = {clientes:d.clientes || {}, produtos:d.produtos || {},
