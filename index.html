@@ -275,4 +275,226 @@ function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('on
 
 async function carregar() {
   const d = (await api('')) || {};
-  D = {clientes:d.clientes || {}, produtos:d.produtos || {},
+  D = {clientes:d.clientes || {}, produtos:d.produtos || {}, pagamentos:d.pagamentos || {}, config:d.config || {}};
+  render();
+}
+const render = () => { renderPainel(); renderLista(); renderAnot(); renderProdutos(); if (atual) renderDetalhe(); };
+const todasNotas = () => Object.entries(D.clientes).flatMap(([cid, c]) => Object.entries(c.notas || {}).map(([nid, n]) => ({cid, nid, cliente:c.nome, ...n})));
+const totalDe = c => Object.values(c.notas || {}).reduce((s, n) => s + Number(n.valor || 0), 0);
+const itensTxt = n => Array.isArray(n.itens) ? n.itens.map(i => `${i.qtd}x ${i.nome}`).join(', ') : n.itens;
+
+function contar(el, to) {
+  const t0 = performance.now();
+  const f = t => { const p = Math.min((t - t0) / 900, 1), e = 1 - Math.pow(1 - p, 3); el.textContent = el.dataset.m ? brl(to * e) : Math.round(to * e); if (p < 1) requestAnimationFrame(f); };
+  requestAnimationFrame(f);
+}
+const barras = (arr, max, attr = '') => arr.map(([k, v, id], i) => `<div class="bar" ${id ? `data-abrir="${id}"` : ''} style="animation-delay:${i*70}ms"><div class="l"><span>${esc(k)}</span><b>${brl(v)}</b></div><i style="--w:${v / max * 100}%"></i></div>`).join('');
+
+function renderPainel() {
+  const ns = todasNotas(), h = hoje();
+  const total = ns.reduce((s, n) => s + Number(n.valor), 0);
+  const atraso = ns.filter(n => n.vencimento && n.vencimento < h).reduce((s, n) => s + Number(n.valor), 0);
+  const mes = new Date().toISOString().slice(0, 7);
+  const pm = Object.values(D.pagamentos).filter(p => new Date(p.data).toISOString().slice(0, 7) === mes);
+  const rec = pm.reduce((s, p) => s + Number(p.valor), 0);
+  [['pTotal', total, 1], ['pAtraso', atraso, 1], ['pRec', rec, 1], ['pCli', Object.keys(D.clientes).length], ['pNotas', ns.length]].forEach(([id, v, m]) => { const e = $(id); e.dataset.m = m ? 1 : ''; contar(e, v); });
+  const top = Object.entries(D.clientes).map(([id, c]) => [c.nome, totalDe(c), id]).filter(c => c[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  $('pTop').innerHTML = top.length ? barras(top, top[0][1]) : '<div class="empty">Ninguém devendo.</div>';
+  const prox = ns.filter(n => n.vencimento).sort((a, b) => a.vencimento.localeCompare(b.vencimento)).slice(0, 5);
+  $('pProx').innerHTML = prox.length ? prox.map((n, i) => `<div class="card" data-abrir="${n.cid}" style="animation-delay:${i*60}ms"><div><b>${esc(n.cliente)}</b><small class="${n.vencimento < h ? 'late' : ''}">${dataBR(n.vencimento)}${n.vencimento < h ? ' (atrasada)' : ''}</small></div><span class="tag">${brl(n.valor)}</span></div>`).join('') : '<div class="empty">Nenhum vencimento cadastrado.</div>';
+  const g = {}; pm.forEach(p => { const k = p.forma || 'nd'; g[k] = (g[k] || 0) + Number(p.valor); });
+  const fa = Object.entries(g).sort((a, b) => b[1] - a[1]).map(([k, v]) => [FORMAS[k] || 'Não informado', v]);
+  $('pForma').innerHTML = fa.length ? barras(fa, fa[0][1]) : '<div class="empty">Nenhum recebimento neste mês.</div>';
+}
+
+function renderLista() {
+  const q = $('busca').value.trim().toLowerCase();
+  const it = Object.entries(D.clientes).filter(([, c]) => c.nome.toLowerCase().includes(q) || (c.telefone || '').includes(q)).sort((a, b) => a[1].nome.localeCompare(b[1].nome));
+  $('clientes').innerHTML = it.length ? it.map(([id, c], i) => { const t = totalDe(c); return `<div class="card" data-abrir="${id}" style="animation-delay:${Math.min(i, 12)*45}ms"><div class="l"><div class="av">${esc(inic(c.nome))}</div><div style="min-width:0"><b>${esc(c.nome)}</b><small>${esc(c.telefone)}</small></div></div><span class="tag ${t ? '' : 'zero'}">${t ? brl(t) : 'Em dia'}</span></div>`; }).join('') : `<div class="empty">${q ? 'Nenhum cliente encontrado.' : 'Nenhum cliente ainda.<br>Toque em + para cadastrar.'}</div>`;
+}
+
+function notaHTML(n, i, comCliente) {
+  const atraso = n.vencimento && n.vencimento < hoje();
+  const chips = [n.pagamento && pagTxt(n.pagamento), n.desconto && `Desc. ${descTxt(n.desconto)}`].filter(Boolean).map(x => `<span class="chp">${esc(x)}</span>`).join('');
+  return `<div class="nota" data-nota="${n.cid}|${n.nid}" style="animation-delay:${Math.min(i, 10)*60}ms">
+    <div class="nn"><span>NOTA ${n.numero ? num4(n.numero) : ''}</span>${n.vencimento ? `<span class="${atraso ? 'late' : ''}">${atraso ? 'ATRASADA · ' : 'VENCE '}${dataBR(n.vencimento)}</span>` : ''}</div>
+    ${comCliente ? `<span class="cli" data-abrir="${n.cid}">${esc(n.cliente)}</span>` : ''}
+    <div class="top"><span>${esc(itensTxt(n))}</span><span class="val">${brl(n.valor)}</span></div>
+    <div class="meta" style="margin-bottom:10px">${chips}</div>
+    <div class="btns"><button class="btn out sm" data-nota="${n.cid}|${n.nid}">Detalhes</button><button class="btn sm" data-pagar="${n.nid}" data-cid="${n.cid}">Marcar como paga</button></div></div>`;
+}
+const ordenar = ns => ns.sort((a, b) => (a.vencimento || '9999').localeCompare(b.vencimento || '9999'));
+
+function renderDetalhe() {
+  const c = D.clientes[atual]; if (!c) return ir('lista');
+  $('dAv').textContent = inic(c.nome); $('dNome').textContent = c.nome; $('dTel').textContent = c.telefone; $('dEnd').textContent = c.endereco || 'Não informado';
+  $('dTotal').textContent = brl(totalDe(c));
+  const ch = [c.documento && c.documento.numero ? `${c.documento.tipo} ${c.documento.numero}` : '', c.pagamentoPadrao ? FORMAS[c.pagamentoPadrao] : '', c.descontoVista ? `${descTxt(c.descontoVista)} de desconto à vista` : ''].filter(Boolean);
+  $('dChips').innerHTML = ch.map(x => `<span class="chp">${esc(x)}</span>`).join('');
+  const ns = ordenar(todasNotas().filter(n => n.cid === atual));
+  $('notas').innerHTML = ns.length ? ns.map((n, i) => notaHTML(n, i)).join('') : '<div class="empty">Nenhuma nota em aberto.</div>';
+}
+function renderAnot() {
+  const h = hoje(), s = em7(); let ns = ordenar(todasNotas());
+  if (filtro === 'atrasadas') ns = ns.filter(n => n.vencimento && n.vencimento < h);
+  if (filtro === 'semana') ns = ns.filter(n => n.vencimento && n.vencimento >= h && n.vencimento <= s);
+  $('todasNotas').innerHTML = ns.length ? ns.map((n, i) => notaHTML(n, i, true)).join('') : '<div class="empty">Nenhuma anotação aqui.</div>';
+}
+function renderProdutos() {
+  const it = Object.entries(D.produtos).sort((a, b) => a[1].nome.localeCompare(b[1].nome));
+  $('produtos').innerHTML = it.length ? it.map(([id, p], i) => `<div class="card" data-prod="${id}" style="animation-delay:${Math.min(i, 12)*45}ms"><div class="l"><div class="av">${esc(inic(p.nome))}</div><b>${esc(p.nome)}</b></div><span class="tag">${brl(p.preco)}</span></div>`).join('') : '<div class="empty">Nenhum produto ainda.<br>Toque em + para cadastrar.</div>';
+}
+
+// navegação do sistem
+function ir(v) {
+  ['painel', 'lista', 'anot', 'prods', 'detalhe'].forEach(s => { const el = $(s), on = s === v; el.classList.toggle('hide', !on); if (on) { el.style.animation = 'none'; el.offsetHeight; el.style.animation = ''; } });
+  aba = v === 'detalhe' ? 'lista' : v;
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === aba));
+  $('fab').classList.toggle('hide', !['lista', 'prods'].includes(v));
+  if (v !== 'detalhe') atual = null; if (v === 'painel') renderPainel(); scrollTo(0, 0);
+}
+const abrir = id => $(id).classList.add('on'), fechar = id => $(id).classList.remove('on');
+function setSeg(id, v) { const s = $(id); s.dataset.val = v; s.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); s.dispatchEvent(new Event('change')); }
+
+document.addEventListener('click', async e => {
+  const t = e.target;
+  const sb = t.closest('.seg button'); if (sb) return setSeg(sb.parentElement.id, sb.dataset.v);
+  if (t.closest('[data-close2]')) return fechar('ovDet');
+  if (t.closest('[data-zapnota]')) return zapNota();
+  const nav = t.closest('nav button'); if (nav) return ir(nav.dataset.v);
+  const pg = t.closest('[data-pagar]'); if (pg) return pagar(pg);
+  const a = t.closest('[data-abrir]'); if (a) { atual = a.dataset.abrir; renderDetalhe(); ir('detalhe'); atual = a.dataset.abrir; return; }
+  const n = t.closest('[data-nota]'); if (n) { const [c, i] = n.dataset.nota.split('|'); return verNota(c, i); }
+  const chip = t.closest('.chip'); if (chip) { filtro = chip.dataset.f; document.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === chip)); renderAnot(); }
+});
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('.ov').classList.remove('on'));
+document.querySelectorAll('.ov').forEach(o => o.onclick = e => { if (e.target === o) o.classList.remove('on'); });
+$('voltar').onclick = () => ir('lista');
+$('busca').oninput = renderLista;
+
+// selects
+const optFormas = vazio => (vazio ? '<option value="">Não definida</option>' : '') + Object.entries(FORMAS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+$('cPag').innerHTML = optFormas(true); $('nPag').innerHTML = optFormas();
+$('nParc').innerHTML = Array.from({length:11}, (_, i) => `<option value="${i + 2}">${i + 2}x</option>`).join('');
+
+// FAB 
+$('fab').onclick = () => {
+  if (aba === 'prods') { editProd = null; $('tProd').textContent = 'Novo produto'; $('fProd').reset(); $('delProd').classList.add('hide'); abrir('ovProd'); setTimeout(() => $('pdNome').focus(), 300); }
+  else { editCli = null; $('tCliente').textContent = 'Novo cliente'; $('fCliente').reset(); setSeg('sgDoc', 'CPF'); setSeg('sgDesc', 'none'); abrir('ovCliente'); setTimeout(() => $('cNome').focus(), 300); }
+};
+
+// pagina de Cliente
+$('sgDesc').onchange = () => $('wDesc').classList.toggle('hide', $('sgDesc').dataset.val === 'none');
+$('sgDoc').onchange = () => { $('cDoc').placeholder = $('sgDoc').dataset.val === 'CPF' ? '000.000.000-00' : 'Número do RG'; $('cDoc').dispatchEvent(new Event('input')); };
+$('cDoc').oninput = e => { if ($('sgDoc').dataset.val === 'CPF') e.target.value = e.target.value.replace(/\D/g, '').slice(0, 11).replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2'); };
+$('editar').onclick = () => {
+  const c = D.clientes[atual]; editCli = atual; $('tCliente').textContent = 'Editar cliente';
+  $('cNome').value = c.nome; $('cTel').value = c.telefone; $('cEnd').value = c.endereco || '';
+  setSeg('sgDoc', c.documento?.tipo || 'CPF'); $('cDoc').value = c.documento?.numero || '';
+  $('cDescVal').value = c.descontoVista?.valor ?? ''; setSeg('sgDesc', c.descontoVista?.tipo || 'none');
+  $('cPag').value = c.pagamentoPadrao || ''; abrir('ovCliente');
+};
+$('fCliente').onsubmit = async e => {
+  e.preventDefault();
+  const dv = $('sgDesc').dataset.val, doc = $('cDoc').value.trim();
+  const d = {nome:$('cNome').value.trim(), telefone:$('cTel').value.trim(), endereco:$('cEnd').value.trim(),
+    documento: doc ? {tipo:$('sgDoc').dataset.val, numero:doc} : null,
+    descontoVista: dv === 'none' ? null : {tipo:dv, valor:parseFloat($('cDescVal').value) || 0},
+    pagamentoPadrao: $('cPag').value};
+  if (editCli) await api(`clientes/${editCli}`, 'PATCH', d); else await api('clientes', 'POST', {...d, criado:Date.now()});
+  fechar('ovCliente'); await carregar(); toast(editCli ? 'Cliente atualizado' : 'Cliente cadastrado');
+};
+$('excluir').onclick = async () => { if (!confirm('Excluir este cliente e todas as notas?')) return; await api(`clientes/${atual}`, 'DELETE'); ir('lista'); await carregar(); toast('Cliente excluído'); };
+$('zap').onclick = () => open(`https://wa.me/${zapNum(D.clientes[atual])}`, '_blank');
+
+// Produtos
+$('produtos').onclick = e => { const c = e.target.closest('[data-prod]'); if (!c) return; const p = D.produtos[c.dataset.prod]; editProd = c.dataset.prod; $('tProd').textContent = 'Editar produto'; $('pdNome').value = p.nome; $('pdPreco').value = p.preco; $('delProd').classList.remove('hide'); abrir('ovProd'); };
+$('fProd').onsubmit = async e => { e.preventDefault(); const d = {nome:$('pdNome').value.trim(), preco:parseFloat($('pdPreco').value)}; if (editProd) await api(`produtos/${editProd}`, 'PATCH', d); else await api('produtos', 'POST', d); fechar('ovProd'); await carregar(); toast('Produto salvo'); };
+$('delProd').onclick = async () => { if (!confirm('Excluir este produto?')) return; await api(`produtos/${editProd}`, 'DELETE'); fechar('ovProd'); await carregar(); toast('Produto excluído'); };
+
+// Nota: cálculo
+function calc() {
+  const sub = itensNota.reduce((s, i) => s + i.qtd * i.preco, 0), t = $('sgND').dataset.val, vista = VISTA.includes($('nPag').value);
+  const dd = vista && t !== 'none' ? {tipo:t, valor:parseFloat($('nDescVal').value) || 0} : null, desc = calcDesc(sub, dd);
+  return {sub, dd, desc, total:sub - desc};
+}
+function resumo() {
+  $('itens').innerHTML = itensNota.map((i, k) => `<div class="it"><span>${i.qtd}x ${esc(i.nome)}</span><span>${brl(i.qtd * i.preco)} <button type="button" data-rm="${k}" aria-label="Remover">×</button></span></div>`).join('');
+  const r = calc(), f = $('nPag').value, p = +$('nParc').value;
+  $('resumo').innerHTML = `<div class="dl"><span>Subtotal</span><span>${brl(r.sub)}</span></div>` + (r.desc > 0 ? `<div class="dl"><span>Desconto (${descTxt(r.dd)})</span><span>− ${brl(r.desc)}</span></div>` : '') + `<div class="dl big"><span>Total</span><span>${brl(r.total)}</span></div>` + (f === 'cartao_parcelado' ? `<div class="dl"><span>${p}x de</span><span>${brl(r.total / p)}</span></div>` : '');
+}
+function atualizaPag(auto) {
+  const f = $('nPag').value, vista = VISTA.includes(f), c = D.clientes[atual];
+  $('wParc').classList.toggle('hide', f !== 'cartao_parcelado'); $('wObs').classList.toggle('hide', f !== 'outros'); $('wDescN').classList.toggle('hide', !vista);
+  if (!vista) setSeg('sgND', 'none');
+  else if (auto && c.descontoVista) { $('nDescVal').value = c.descontoVista.valor; setSeg('sgND', c.descontoVista.tipo); }
+  resumo();
+}
+$('nPag').onchange = () => atualizaPag(true); $('nParc').onchange = resumo; $('nDescVal').oninput = resumo;
+$('sgND').onchange = () => { $('wND').classList.toggle('hide', $('sgND').dataset.val === 'none'); resumo(); };
+$('nSel').onchange = () => { const av = $('nSel').value === '_'; $('aNome').classList.toggle('hide', !av); $('aPreco').classList.toggle('hide', !av); };
+$('novaNota').onclick = () => {
+  itensNota = []; $('fNota').reset();
+  $('nSel').innerHTML = Object.entries(D.produtos).sort((a, b) => a[1].nome.localeCompare(b[1].nome)).map(([id, p]) => `<option value="${id}">${esc(p.nome)} — ${brl(p.preco)}</option>`).join('') + '<option value="_">Outro item (avulso)</option>';
+  $('nSel').onchange(); $('nPag').value = D.clientes[atual].pagamentoPadrao || 'dinheiro'; setSeg('sgND', 'none'); atualizaPag(true); abrir('ovNota');
+};
+$('addItem').onclick = () => {
+  const qtd = Math.max(1, parseInt($('nQtd').value) || 1); let nome, preco;
+  if ($('nSel').value === '_') { nome = $('aNome').value.trim(); preco = parseFloat($('aPreco').value); if (!nome || isNaN(preco)) return toast('Informe nome e preço'); $('aNome').value = $('aPreco').value = ''; }
+  else { const p = D.produtos[$('nSel').value]; nome = p.nome; preco = Number(p.preco); }
+  itensNota.push({nome, preco, qtd}); $('nQtd').value = 1; resumo();
+};
+$('itens').onclick = e => { const b = e.target.closest('[data-rm]'); if (b) { itensNota.splice(b.dataset.rm, 1); resumo(); } };
+$('fNota').onsubmit = async e => {
+  e.preventDefault(); if (!itensNota.length) return toast('Adicione ao menos um item');
+  const r = calc(), f = $('nPag').value, pagamento = {forma:f};
+  if (f === 'cartao_parcelado') pagamento.parcelas = +$('nParc').value;
+  if (f === 'outros') pagamento.obs = $('nObs').value.trim();
+  const numero = (Number(D.config.contador) || 0) + 1;
+  await api('config/contador', 'PUT', numero);
+  await api(`clientes/${atual}/notas`, 'POST', {numero, itens:itensNota, subtotal:r.sub, desconto:r.desc > 0 ? {...r.dd, calc:r.desc} : null, valor:r.total, pagamento, vencimento:$('nData').value || '', criado:Date.now()});
+  fechar('ovNota'); await carregar(); toast(`Nota ${num4(numero)} criada`);
+};
+
+// Detalhe da nota
+function verNota(cid, nid) {
+  const c = D.clientes[cid], n = c.notas[nid]; notaAberta = {cid, nid};
+  const itens = Array.isArray(n.itens) ? n.itens.map(i => `<div class="dl"><span>${i.qtd}x ${esc(i.nome)}</span><span>${brl(i.qtd * i.preco)}</span></div>`).join('') : `<div class="dl"><span>${esc(n.itens)}</span></div>`;
+  const p = n.pagamento;
+  $('detBody').innerHTML = `<div class="nn"><span>NOTA ${n.numero ? num4(n.numero) : ''}</span></div><h3>${esc(c.nome)}</h3><div class="meta">Emitida em ${new Date(n.criado || Date.now()).toLocaleDateString('pt-BR')}</div>${itens}
+    ${n.subtotal != null ? `<div class="dl"><span>Subtotal</span><span>${brl(n.subtotal)}</span></div>` : ''}
+    ${n.desconto ? `<div class="dl"><span>Desconto (${descTxt(n.desconto)})</span><span>− ${brl(n.desconto.calc)}</span></div>` : ''}
+    <div class="dl big"><span>Total</span><span>${brl(n.valor)}</span></div>
+    ${p ? `<div class="dl"><span>Pagamento</span><span>${esc(pagTxt(p))}</span></div>` : ''}
+    ${p && p.parcelas ? `<div class="dl"><span>Parcelas</span><span>${p.parcelas}x de ${brl(n.valor / p.parcelas)}</span></div>` : ''}
+    <div class="dl"><span>Vencimento</span><span>${n.vencimento ? dataBR(n.vencimento) : '—'}</span></div>
+    <div class="row" style="margin-top:20px"><button class="btn out" data-zapnota>WhatsApp</button><button class="btn" data-pagar="${nid}" data-cid="${cid}">Marcar como paga</button></div>
+    <button class="link" data-close2>Fechar</button>`;
+  abrir('ovDet');
+}
+function zapNota() {
+  const {cid, nid} = notaAberta, c = D.clientes[cid], n = c.notas[nid], p = n.pagamento;
+  let t = `Olá, ${c.nome}! Segue sua nota ${n.numero ? num4(n.numero) : ''}:\n` + (Array.isArray(n.itens) ? n.itens.map(i => `• ${i.qtd}x ${i.nome} — ${brl(i.qtd * i.preco)}`).join('\n') : n.itens);
+  if (n.desconto) t += `\nDesconto: − ${brl(n.desconto.calc)}`;
+  t += `\n*Total: ${brl(n.valor)}*`;
+  if (p) t += `\nPagamento: ${pagTxt(p)}${p.parcelas ? ` (${p.parcelas}x de ${brl(n.valor / p.parcelas)})` : ''}`;
+  if (n.vencimento) t += `\nVencimento: ${dataBR(n.vencimento)}`;
+  open(`https://wa.me/${zapNum(c)}?text=${encodeURIComponent(t)}`, '_blank');
+}
+
+// Pagar: apaga a nota e registra o recebimento
+async function pagar(b) {
+  const cid = b.dataset.cid, nid = b.dataset.pagar, n = D.clientes[cid].notas[nid], el = b.closest('.nota');
+  b.disabled = true;
+  if (el) { el.style.maxHeight = el.offsetHeight + 'px'; el.offsetHeight; el.classList.add('paid'); }
+  fechar('ovDet');
+  await api('pagamentos', 'POST', {cliente:cid, valor:Number(n.valor), forma:n.pagamento?.forma || '', data:Date.now()});
+  await api(`clientes/${cid}/notas/${nid}`, 'DELETE');
+  toast('Nota paga e removida'); setTimeout(carregar, 550);
+}
+//finalização do codigo e do sistema
+ir('painel');
+carregar().catch(() => { $('pTop').innerHTML = '<div class="empty">Não foi possível carregar.<br>Confira as regras do Firebase.</div>'; });
+</script>
+</body>
+</html>
