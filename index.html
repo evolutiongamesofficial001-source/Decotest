@@ -239,7 +239,7 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;st
   <div id="itens"></div>
   <div class="sec">Forma de pagamento</div>
   <select id="nPag"></select>
-  <div class="field hide" id="wParc" style="margin-top:10px"><select id="nParc"></select></div>
+  <div class="field hide" id="wParc" style="margin-top:10px"><label id="lParc" for="nParc">Parcelar em quantas vezes?</label><select id="nParc"></select></div>
   <div class="field hide" id="wObs" style="margin-top:10px"><input id="nObs" placeholder="Descreva a forma de pagamento" autocomplete="off"></div>
   <div id="wDescN" class="hide">
     <div class="sec">Desconto à vista</div>
@@ -262,6 +262,7 @@ const DB = 'https://lorena-df029-default-rtdb.firebaseio.com';
 const $ = id => document.getElementById(id);
 const FORMAS = {dinheiro:'Dinheiro', pix:'PIX', cartao_vista:'Cartão à vista', cartao_parcelado:'Cartão parcelado', promissoria:'Nota promissória', outros:'Outros'};
 const VISTA = ['dinheiro', 'pix', 'cartao_vista'];
+const PARCELAVEL = ['cartao_parcelado', 'promissoria'];
 const MAX_VENDAS = 20;
 let D = {clientes:{}, produtos:{}, pagamentos:{}, config:{}}, atual = null, aba = 'painel', filtro = 'todas', editCli = null, editProd = null, itensNota = [], notaAberta = null;
 
@@ -275,8 +276,8 @@ const num4 = n => '#' + String(n).padStart(4, '0');
 const inic = s => s.trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
 const calcDesc = (sub, d) => !d || !d.valor ? 0 : Math.min(sub, d.tipo === '%' ? sub * d.valor / 100 : d.valor);
 const descTxt = d => d.tipo === '%' ? `${d.valor}%` : brl(d.valor);
-const pagTxt = p => !p ? '' : p.forma === 'cartao_parcelado' && p.parcelas ? `Cartão ${p.parcelas}x` : p.forma === 'outros' && p.obs ? `Outros: ${p.obs}` : FORMAS[p.forma] || '';
-const formaTxt = (f, parc) => f === 'cartao_parcelado' && parc ? `Cartão ${parc}x` : FORMAS[f] || '';
+const pagTxt = p => !p ? '' : p.forma === 'cartao_parcelado' && p.parcelas ? `Cartão ${p.parcelas}x` : p.forma === 'promissoria' && p.parcelas > 1 ? `Promissória ${p.parcelas}x` : p.forma === 'outros' && p.obs ? `Outros: ${p.obs}` : FORMAS[p.forma] || '';
+const formaTxt = (f, parc) => f === 'cartao_parcelado' && parc ? `Cartão ${parc}x` : f === 'promissoria' && parc > 1 ? `Promissória ${parc}x` : FORMAS[f] || '';
 const dtBR = t => t ? new Date(t).toLocaleDateString('pt-BR') : '—';
 const zapNum = c => { let n = c.telefone.replace(/\D/g, ''); return n.length <= 11 ? '55' + n : n; };
 
@@ -463,7 +464,20 @@ $('nData').oninput = e => e.target.value = maskData(e.target.value);
 // selects
 const optFormas = vazio => (vazio ? '<option value="">Não definida</option>' : '') + Object.entries(FORMAS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
 $('cPag').innerHTML = optFormas(true); $('nPag').innerHTML = optFormas();
-$('nParc').innerHTML = Array.from({length:11}, (_, i) => `<option value="${i + 2}">${i + 2}x</option>`).join('');
+
+// Parcelas: cartão parcelado = 2x a 12x · nota promissória = sem parcelar ou 2x a 24x (uma por mês)
+function preencherParcelas(f) {
+  if (f === 'promissoria') {
+    $('lParc').textContent = 'Parcelas (uma por mês)';
+    $('nParc').innerHTML = '<option value="1">Sem parcelar</option>' + Array.from({length:23}, (_, i) => `<option value="${i + 2}">${i + 2}x (${i + 2} meses)</option>`).join('');
+  } else {
+    $('lParc').textContent = 'Parcelar em quantas vezes?';
+    $('nParc').innerHTML = Array.from({length:11}, (_, i) => `<option value="${i + 2}">${i + 2}x</option>`).join('');
+  }
+  $('nParc').selectedIndex = 0;
+}
+// Número de parcelas da forma atual (0 = não se aplica)
+const parcelasNota = () => PARCELAVEL.includes($('nPag').value) ? (parseInt($('nParc').value) || 0) : 0;
 
 // FAB 
 $('fab').onclick = () => {
@@ -508,12 +522,13 @@ function calc() {
 }
 function resumo() {
   $('itens').innerHTML = itensNota.map((i, k) => `<div class="it"><span>${i.qtd}x ${esc(i.nome)}</span><span>${brl(i.qtd * i.preco)} <button type="button" data-rm="${k}" aria-label="Remover">×</button></span></div>`).join('');
-  const r = calc(), f = $('nPag').value, p = +$('nParc').value;
-  $('resumo').innerHTML = `<div class="dl"><span>Subtotal</span><span>${brl(r.sub)}</span></div>` + (r.desc > 0 ? `<div class="dl"><span>Desconto (${descTxt(r.dd)})</span><span>− ${brl(r.desc)}</span></div>` : '') + `<div class="dl big"><span>Total</span><span>${brl(r.total)}</span></div>` + (f === 'cartao_parcelado' ? `<div class="dl"><span>${p}x de</span><span>${brl(r.total / p)}</span></div>` : '');
+  const r = calc(), p = parcelasNota();
+  $('resumo').innerHTML = `<div class="dl"><span>Subtotal</span><span>${brl(r.sub)}</span></div>` + (r.desc > 0 ? `<div class="dl"><span>Desconto (${descTxt(r.dd)})</span><span>− ${brl(r.desc)}</span></div>` : '') + `<div class="dl big"><span>Total</span><span>${brl(r.total)}</span></div>` + (p > 1 ? `<div class="dl"><span>${p}x de</span><span>${brl(r.total / p)}</span></div>` : '');
 }
 function atualizaPag(auto) {
-  const f = $('nPag').value, vista = VISTA.includes(f), c = D.clientes[atual];
-  $('wParc').classList.toggle('hide', f !== 'cartao_parcelado'); $('wObs').classList.toggle('hide', f !== 'outros'); $('wDescN').classList.toggle('hide', !vista);
+  const f = $('nPag').value, vista = VISTA.includes(f), parcelavel = PARCELAVEL.includes(f), c = D.clientes[atual];
+  $('wParc').classList.toggle('hide', !parcelavel); $('wObs').classList.toggle('hide', f !== 'outros'); $('wDescN').classList.toggle('hide', !vista);
+  if (parcelavel) preencherParcelas(f);
   if (!vista) setSeg('sgND', 'none');
   else if (auto && c.descontoVista) { $('nDescVal').value = c.descontoVista.valor; setSeg('sgND', c.descontoVista.tipo); }
   resumo();
@@ -536,8 +551,8 @@ $('itens').onclick = e => { const b = e.target.closest('[data-rm]'); if (b) { it
 $('fNota').onsubmit = async e => {
   e.preventDefault(); if (!itensNota.length) return toast('Adicione ao menos um item');
   const venc = dataISO($('nData').value.trim()); if (venc === null) return toast('Data inválida. Use dd/mm/aaaa');
-  const r = calc(), f = $('nPag').value, pagamento = {forma:f};
-  if (f === 'cartao_parcelado') pagamento.parcelas = +$('nParc').value;
+  const r = calc(), f = $('nPag').value, pagamento = {forma:f}, parcelas = parcelasNota();
+  if (parcelas > 1) pagamento.parcelas = parcelas;
   if (f === 'outros') pagamento.obs = $('nObs').value.trim();
   const numero = (Number(D.config.contador) || 0) + 1;
   await api('config/contador', 'PUT', numero);
