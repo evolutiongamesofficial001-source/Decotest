@@ -281,6 +281,20 @@ const formaTxt = (f, parc) => f === 'cartao_parcelado' && parc ? `Cartão ${parc
 const dtBR = t => t ? new Date(t).toLocaleDateString('pt-BR') : '—';
 const zapNum = c => { let n = c.telefone.replace(/\D/g, ''); return n.length <= 11 ? '55' + n : n; };
 
+// ===== parcelas =====
+const pad2 = n => String(n).padStart(2, '0');
+// Soma meses a uma data aaaa-mm-dd (ajusta o dia nos meses mais curtos)
+function somaMeses(d, n) {
+  const [y, m, dia] = d.split('-').map(Number), alvo = new Date(y, m - 1 + n, 1), ult = new Date(y, m + n, 0).getDate();
+  return `${alvo.getFullYear()}-${pad2(alvo.getMonth() + 1)}-${pad2(Math.min(dia, ult))}`;
+}
+// Divide o total em p parcelas (a última ajusta os centavos). A 1ª vence na data informada, as outras de mês em mês.
+function listaParcelas(total, p, venc) {
+  const cent = Math.round(total * 100), b = Math.floor(cent / p);
+  return Array.from({length:p}, (_, i) => ({n:i + 1, valor:(i === p - 1 ? cent - b * (p - 1) : b) / 100, data:venc ? somaMeses(venc, i) : ''}));
+}
+const listaParcelasHTML = (total, p, venc) => `<div class="sec" style="margin:14px 0 4px">Parcelas</div>` + listaParcelas(total, p, venc).map(x => `<div class="dl"><span>Parcela ${x.n}/${p}${x.data ? ' · ' + dataBR(x.data) : ''}</span><span>${brl(x.valor)}</span></div>`).join('');
+
 // ===== máscaras =====
 // (xx)xxxxxxxxx
 const maskTel = v => { const d = v.replace(/\D/g, '').slice(0, 11); return d.length <= 2 ? (d ? '(' + d : '') : `(${d.slice(0, 2)})${d.slice(2)}`; };
@@ -459,7 +473,7 @@ document.addEventListener('focusout', e => {
 
 // máscaras nos campos
 $('cTel').oninput = e => e.target.value = maskTel(e.target.value);
-$('nData').oninput = e => e.target.value = maskData(e.target.value);
+$('nData').oninput = e => { e.target.value = maskData(e.target.value); resumo(); };
 
 // selects
 const optFormas = vazio => (vazio ? '<option value="">Não definida</option>' : '') + Object.entries(FORMAS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
@@ -523,7 +537,7 @@ function calc() {
 function resumo() {
   $('itens').innerHTML = itensNota.map((i, k) => `<div class="it"><span>${i.qtd}x ${esc(i.nome)}</span><span>${brl(i.qtd * i.preco)} <button type="button" data-rm="${k}" aria-label="Remover">×</button></span></div>`).join('');
   const r = calc(), p = parcelasNota();
-  $('resumo').innerHTML = `<div class="dl"><span>Subtotal</span><span>${brl(r.sub)}</span></div>` + (r.desc > 0 ? `<div class="dl"><span>Desconto (${descTxt(r.dd)})</span><span>− ${brl(r.desc)}</span></div>` : '') + `<div class="dl big"><span>Total</span><span>${brl(r.total)}</span></div>` + (p > 1 ? `<div class="dl"><span>${p}x de</span><span>${brl(r.total / p)}</span></div>` : '');
+  $('resumo').innerHTML = `<div class="dl"><span>Subtotal</span><span>${brl(r.sub)}</span></div>` + (r.desc > 0 ? `<div class="dl"><span>Desconto (${descTxt(r.dd)})</span><span>− ${brl(r.desc)}</span></div>` : '') + `<div class="dl big"><span>Total</span><span>${brl(r.total)}</span></div>` + (p > 1 ? `<div class="dl"><span>${p}x de</span><span>${brl(r.total / p)}</span></div>` + listaParcelasHTML(r.total, p, dataISO($('nData').value.trim()) || '') + (dataISO($('nData').value.trim()) ? '' : `<div class="dl" style="color:var(--mut);font-size:13px"><span>Informe o vencimento para ver a data de cada parcela</span></div>`) : '');
 }
 function atualizaPag(auto) {
   const f = $('nPag').value, vista = VISTA.includes(f), parcelavel = PARCELAVEL.includes(f), c = D.clientes[atual];
@@ -570,7 +584,7 @@ function verNota(cid, nid) {
     ${n.desconto ? `<div class="dl"><span>Desconto (${descTxt(n.desconto)})</span><span>− ${brl(n.desconto.calc)}</span></div>` : ''}
     <div class="dl big"><span>Total</span><span>${brl(n.valor)}</span></div>
     ${p ? `<div class="dl"><span>Pagamento</span><span>${esc(pagTxt(p))}</span></div>` : ''}
-    ${p && p.parcelas ? `<div class="dl"><span>Parcelas</span><span>${p.parcelas}x de ${brl(n.valor / p.parcelas)}</span></div>` : ''}
+    ${p && p.parcelas ? `<div class="dl"><span>Parcelas</span><span>${p.parcelas}x de ${brl(n.valor / p.parcelas)}</span></div>` + listaParcelasHTML(n.valor, p.parcelas, n.vencimento || '') : ''}
     <div class="dl"><span>Vencimento</span><span>${n.vencimento ? dataBR(n.vencimento) : '—'}</span></div>
     <div class="row" style="margin-top:20px"><button class="btn out" data-zapnota>WhatsApp</button><button class="btn" data-pagar="${nid}" data-cid="${cid}">Marcar como paga</button></div>
     <button class="link" data-close2>Fechar</button>`;
@@ -582,6 +596,7 @@ function zapNota() {
   if (n.desconto) t += `\nDesconto: − ${brl(n.desconto.calc)}`;
   t += `\n*Total: ${brl(n.valor)}*`;
   if (p) t += `\nPagamento: ${pagTxt(p)}${p.parcelas ? ` (${p.parcelas}x de ${brl(n.valor / p.parcelas)})` : ''}`;
+  if (p && p.parcelas > 1) t += '\n' + listaParcelas(n.valor, p.parcelas, n.vencimento || '').map(x => `${x.n}/${p.parcelas} — ${brl(x.valor)}${x.data ? ' · ' + dataBR(x.data) : ''}`).join('\n');
   if (n.vencimento) t += `\nVencimento: ${dataBR(n.vencimento)}`;
   open(`https://wa.me/${zapNum(c)}?text=${encodeURIComponent(t)}`, '_blank');
 }
