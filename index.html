@@ -119,6 +119,7 @@ h1{font-size:34px;margin-bottom:22px}
 .dl.big{font-size:20px;font-weight:800;border-bottom:0}
 .box{border:1.5px solid #2c2c2c;border-radius:14px;padding:6px 16px;margin:18px 0 6px;background:#0a0a0a}
 .sheet h3{margin-bottom:6px}.sheet .meta{margin-bottom:12px;color:var(--mut);font-size:14px}
+.rep{cursor:default;flex-wrap:wrap}.rep:hover{transform:none}.rep .r{display:flex;gap:8px;align-items:center}.rep .r input{width:84px;padding:10px 12px}
 nav{gap:2px}
 nav button{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;padding:9px 4px}
 nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -163,6 +164,13 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;st
     <div id="produtos"></div>
   </section>
 
+  <section id="repos" class="view hide">
+    <h1>Reposição</h1>
+    <p style="color:var(--mut);font-size:14px;margin:-8px 0 16px">Chegou mais produtos? Informe a quantidade e toque em Repor para somar ao estoque.</p>
+    <input class="search" id="buscaRep" placeholder="Buscar produto" type="search">
+    <div id="reposicao"></div>
+  </section>
+
   <section id="detalhe" class="view hide">
     <button class="back" id="voltar">← Voltar</button>
     <div class="head"><div class="av lg" id="dAv"></div><h2 id="dNome"></h2></div>
@@ -181,7 +189,7 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;st
 
 <button class="btn fab" id="fab" aria-label="Adicionar">+</button>
 
-<nav id="nav"><button data-v="painel" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Painel</button><button data-v="lista"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M16 4a4 4 0 010 8M22 21c0-3-2-5-4-5.5"/></svg>Clientes</button><button data-v="anot"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg>Anotações</button><button data-v="prods"><svg viewBox="0 0 24 24"><path d="M3 12l9-9h8v8l-9 9z"/><circle cx="15.5" cy="8.5" r="1.3"/></svg>Produtos</button></nav>
+<nav id="nav"><button data-v="painel" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Painel</button><button data-v="lista"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M16 4a4 4 0 010 8M22 21c0-3-2-5-4-5.5"/></svg>Clientes</button><button data-v="anot"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg>Anotações</button><button data-v="prods"><svg viewBox="0 0 24 24"><path d="M3 12l9-9h8v8l-9 9z"/><circle cx="15.5" cy="8.5" r="1.3"/></svg>Produtos</button><button data-v="repos"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0115-6.7L21 8M21 3v5h-5M21 12a9 9 0 01-15 6.7L3 16M3 21v-5h5"/></svg>Reposição</button></nav>
 
 <!-- Cliente -->
 <div class="ov" id="ovCliente"><form class="sheet" id="fCliente">
@@ -206,6 +214,7 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;st
   <h3 id="tProd">Novo produto</h3>
   <div class="field" style="margin-top:14px"><label>Nome do produto</label><input id="pdNome" required autocomplete="off"></div>
   <div class="field"><label>Preço (R$)</label><input id="pdPreco" type="number" step="0.01" min="0" inputmode="decimal" required></div>
+  <div class="field"><label>Quantidade em estoque</label><input id="pdQtd" type="number" step="1" min="0" value="0" inputmode="numeric"></div>
   <div class="row"><button type="button" class="btn out" data-close>Cancelar</button><button class="btn">Salvar</button></div>
   <button type="button" class="link" id="delProd">Excluir produto</button>
 </form></div>
@@ -245,7 +254,7 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;st
 <script>
 const DB = 'https://lorena-df029-default-rtdb.firebaseio.com';
 const $ = id => document.getElementById(id);
-const FORMAS = {dinheiro:'Dinheiro', pix:'PIX', cartao_vista:'Cartão à vista', cartao_parcelado:'Cartão parcelado', outros:'Outros'};
+const FORMAS = {dinheiro:'Dinheiro', pix:'PIX', cartao_vista:'Cartão à vista', cartao_parcelado:'Cartão parcelado', promissoria:'Nota promissória', outros:'Outros'};
 const VISTA = ['dinheiro', 'pix', 'cartao_vista'];
 let D = {clientes:{}, produtos:{}, pagamentos:{}, config:{}}, atual = null, aba = 'painel', filtro = 'todas', editCli = null, editProd = null, itensNota = [], notaAberta = null;
 
@@ -278,7 +287,7 @@ async function carregar() {
   D = {clientes:d.clientes || {}, produtos:d.produtos || {}, pagamentos:d.pagamentos || {}, config:d.config || {}};
   render();
 }
-const render = () => { renderPainel(); renderLista(); renderAnot(); renderProdutos(); if (atual) renderDetalhe(); };
+const render = () => { renderPainel(); renderLista(); renderAnot(); renderProdutos(); renderRepos(); if (atual) renderDetalhe(); };
 const todasNotas = () => Object.entries(D.clientes).flatMap(([cid, c]) => Object.entries(c.notas || {}).map(([nid, n]) => ({cid, nid, cliente:c.nome, ...n})));
 const totalDe = c => Object.values(c.notas || {}).reduce((s, n) => s + Number(n.valor || 0), 0);
 const itensTxt = n => Array.isArray(n.itens) ? n.itens.map(i => `${i.qtd}x ${i.nome}`).join(', ') : n.itens;
@@ -342,12 +351,17 @@ function renderAnot() {
 }
 function renderProdutos() {
   const it = Object.entries(D.produtos).sort((a, b) => a[1].nome.localeCompare(b[1].nome));
-  $('produtos').innerHTML = it.length ? it.map(([id, p], i) => `<div class="card" data-prod="${id}" style="animation-delay:${Math.min(i, 12)*45}ms"><div class="l"><div class="av">${esc(inic(p.nome))}</div><b>${esc(p.nome)}</b></div><span class="tag">${brl(p.preco)}</span></div>`).join('') : '<div class="empty">Nenhum produto ainda.<br>Toque em + para cadastrar.</div>';
+  $('produtos').innerHTML = it.length ? it.map(([id, p], i) => `<div class="card" data-prod="${id}" style="animation-delay:${Math.min(i, 12)*45}ms"><div class="l"><div class="av">${esc(inic(p.nome))}</div><div style="min-width:0"><b>${esc(p.nome)}</b><small>Estoque: ${Number(p.quantidade) || 0}</small></div></div><span class="tag">${brl(p.preco)}</span></div>`).join('') : '<div class="empty">Nenhum produto ainda.<br>Toque em + para cadastrar.</div>';
+}
+function renderRepos() {
+  const q = $('buscaRep').value.trim().toLowerCase();
+  const it = Object.entries(D.produtos).filter(([, p]) => p.nome.toLowerCase().includes(q)).sort((a, b) => a[1].nome.localeCompare(b[1].nome));
+  $('reposicao').innerHTML = it.length ? it.map(([id, p], i) => `<div class="card rep" style="animation-delay:${Math.min(i, 12)*45}ms"><div class="l"><div class="av">${esc(inic(p.nome))}</div><div style="min-width:0"><b>${esc(p.nome)}</b><small>Estoque atual: ${Number(p.quantidade) || 0}</small></div></div><div class="r"><input type="number" min="1" step="1" value="1" inputmode="numeric" aria-label="Quantidade que chegou"><button class="btn sm" data-repor="${id}">+ Repor</button></div></div>`).join('') : `<div class="empty">${q ? 'Nenhum produto encontrado.' : 'Nenhum produto ainda.<br>Cadastre produtos na aba Produtos.'}</div>`;
 }
 
 // navegação do sistem
 function ir(v) {
-  ['painel', 'lista', 'anot', 'prods', 'detalhe'].forEach(s => { const el = $(s), on = s === v; el.classList.toggle('hide', !on); if (on) { el.style.animation = 'none'; el.offsetHeight; el.style.animation = ''; } });
+  ['painel', 'lista', 'anot', 'prods', 'repos', 'detalhe'].forEach(s => { const el = $(s), on = s === v; el.classList.toggle('hide', !on); if (on) { el.style.animation = 'none'; el.offsetHeight; el.style.animation = ''; } });
   aba = v === 'detalhe' ? 'lista' : v;
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === aba));
   $('fab').classList.toggle('hide', !['lista', 'prods'].includes(v));
@@ -362,6 +376,7 @@ document.addEventListener('click', async e => {
   if (t.closest('[data-close2]')) return fechar('ovDet');
   if (t.closest('[data-zapnota]')) return zapNota();
   const nav = t.closest('nav button'); if (nav) return ir(nav.dataset.v);
+  const rp = t.closest('[data-repor]'); if (rp) return repor(rp);
   const pg = t.closest('[data-pagar]'); if (pg) return pagar(pg);
   const a = t.closest('[data-abrir]'); if (a) { atual = a.dataset.abrir; renderDetalhe(); ir('detalhe'); atual = a.dataset.abrir; return; }
   const n = t.closest('[data-nota]'); if (n) { const [c, i] = n.dataset.nota.split('|'); return verNota(c, i); }
@@ -371,6 +386,7 @@ document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.close
 document.querySelectorAll('.ov').forEach(o => o.onclick = e => { if (e.target === o) o.classList.remove('on'); });
 $('voltar').onclick = () => ir('lista');
 $('busca').oninput = renderLista;
+$('buscaRep').oninput = renderRepos;
 
 // selects
 const optFormas = vazio => (vazio ? '<option value="">Não definida</option>' : '') + Object.entries(FORMAS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
@@ -408,9 +424,22 @@ $('excluir').onclick = async () => { if (!confirm('Excluir este cliente e todas 
 $('zap').onclick = () => open(`https://wa.me/${zapNum(D.clientes[atual])}`, '_blank');
 
 // Produtos
-$('produtos').onclick = e => { const c = e.target.closest('[data-prod]'); if (!c) return; const p = D.produtos[c.dataset.prod]; editProd = c.dataset.prod; $('tProd').textContent = 'Editar produto'; $('pdNome').value = p.nome; $('pdPreco').value = p.preco; $('delProd').classList.remove('hide'); abrir('ovProd'); };
-$('fProd').onsubmit = async e => { e.preventDefault(); const d = {nome:$('pdNome').value.trim(), preco:parseFloat($('pdPreco').value)}; if (editProd) await api(`produtos/${editProd}`, 'PATCH', d); else await api('produtos', 'POST', d); fechar('ovProd'); await carregar(); toast('Produto salvo'); };
+$('produtos').onclick = e => { const c = e.target.closest('[data-prod]'); if (!c) return; const p = D.produtos[c.dataset.prod]; editProd = c.dataset.prod; $('tProd').textContent = 'Editar produto'; $('pdNome').value = p.nome; $('pdPreco').value = p.preco; $('pdQtd').value = Number(p.quantidade) || 0; $('delProd').classList.remove('hide'); abrir('ovProd'); };
+$('fProd').onsubmit = async e => { e.preventDefault(); const d = {nome:$('pdNome').value.trim(), preco:parseFloat($('pdPreco').value), quantidade:Math.max(0, parseInt($('pdQtd').value) || 0)}; if (editProd) await api(`produtos/${editProd}`, 'PATCH', d); else await api('produtos', 'POST', d); fechar('ovProd'); await carregar(); toast('Produto salvo'); };
 $('delProd').onclick = async () => { if (!confirm('Excluir este produto?')) return; await api(`produtos/${editProd}`, 'DELETE'); fechar('ovProd'); await carregar(); toast('Produto excluído'); };
+
+// Reposição: soma a quantidade que chegou ao estoque (lê o valor atual do servidor)
+async function repor(b) {
+  const id = b.dataset.repor, inp = b.closest('.rep').querySelector('input'), entrada = parseInt(inp.value);
+  if (!entrada || entrada < 1) return toast('Informe a quantidade que chegou');
+  b.disabled = true;
+  try {
+    const atual = Number(await api(`produtos/${id}/quantidade`)) || 0, nova = atual + entrada;
+    await api(`produtos/${id}`, 'PATCH', {quantidade:nova});
+    D.produtos[id].quantidade = nova; render();
+    toast(`+${entrada} em ${D.produtos[id].nome}. Estoque: ${nova}`);
+  } catch (e) { b.disabled = false; }
+}
 
 // Nota: cálculo
 function calc() {
