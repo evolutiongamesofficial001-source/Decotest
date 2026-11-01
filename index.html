@@ -23,7 +23,6 @@ h4{font-size:16px;margin:28px 0 12px;color:var(--mut);font-weight:600}
 input,select{width:100%;background:var(--soft);border:1.5px solid var(--line);border-radius:12px;padding:13px 14px;outline:0;transition:border-color .2s}
 input:focus,select:focus{border-color:var(--fg)}
 select option{background:#111}
-input[type=date]{color-scheme:dark}
 .search{margin-bottom:16px}
 .card{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1.5px solid var(--line);background:var(--soft);border-radius:16px;padding:16px 18px;margin-bottom:10px;cursor:pointer;transition:border-color .25s,transform .25s var(--ease);animation:in .5s var(--ease) both}
 .card:hover{border-color:var(--fg);transform:translateX(6px)}
@@ -65,6 +64,14 @@ input[type=date]{color-scheme:dark}
 .chips{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
 .chip{border:1.5px solid #333;background:none;border-radius:99px;padding:8px 16px;cursor:pointer;font-size:14px;transition:.25s}
 .chip.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+/* itens vendidos / fechar caixa */
+.sechead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:28px 0 12px}
+.sechead h4{margin:0 0 4px}.sechead small{color:var(--mut);font-size:12px}
+.btn.danger{color:#ff8a8a;border-color:#4a2a2a;white-space:nowrap}
+.btn.danger:hover{background:#ff8a8a;color:#000;border-color:#ff8a8a}
+.venda{border:1.5px solid var(--line);background:linear-gradient(180deg,#121212,#0a0a0a);border-radius:14px;padding:14px 16px;margin-bottom:8px;animation:in .45s var(--ease) both}
+.venda .t{display:flex;justify-content:space-between;gap:10px;font-weight:700;margin-bottom:8px}
+.venda small{color:var(--mut);font-size:12px;display:block;margin-top:2px}
 /* nav */
 nav{position:fixed;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;justify-content:center;gap:4px;padding:10px 10px calc(10px + env(safe-area-inset-bottom));z-index:5}
 nav button{flex:1;max-width:150px;background:none;border:0;border-radius:12px;padding:11px 4px;font-size:14px;font-weight:600;color:var(--mut);cursor:pointer;transition:background .3s,color .3s,transform .2s}
@@ -111,6 +118,8 @@ h1{font-size:34px;margin-bottom:22px}
 .seg button{flex:1;border:0;background:none;border-radius:9px;padding:10px 6px;color:var(--mut);font-weight:600;cursor:pointer;transition:background .25s,color .25s}
 .seg button.on{background:var(--fg);color:#000}
 .chp{display:inline-block;border:1px solid #333;border-radius:99px;padding:4px 11px;font-size:12px;color:#c4c4c4;margin:0 6px 6px 0;animation:in .4s var(--ease) both}
+.chp.pg{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chp.ab{border-style:dashed}
 .nota{cursor:pointer;background:linear-gradient(180deg,#121212,#0a0a0a)}
 .nota:hover{border-color:#555}
 .nn{font-size:12px;letter-spacing:.1em;color:var(--mut);font-weight:700;margin-bottom:6px;display:flex;justify-content:space-between}
@@ -119,7 +128,6 @@ h1{font-size:34px;margin-bottom:22px}
 .dl.big{font-size:20px;font-weight:800;border-bottom:0}
 .box{border:1.5px solid #2c2c2c;border-radius:14px;padding:6px 16px;margin:18px 0 6px;background:#0a0a0a}
 .sheet h3{margin-bottom:6px}.sheet .meta{margin-bottom:12px;color:var(--mut);font-size:14px}
-.rep{cursor:default;flex-wrap:wrap}.rep:hover{transform:none}.rep .r{display:flex;gap:8px;align-items:center}.rep .r input{width:84px;padding:10px 12px}
 nav{gap:2px}
 nav button{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;padding:9px 4px}
 nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -140,6 +148,11 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;st
     </div>
     <h4>Quem mais deve</h4><div id="pTop"></div>
     <h4>Próximos vencimentos</h4><div id="pProx"></div>
+    <div class="sechead">
+      <div><h4>Itens vendidos</h4><small id="pFech">Cada item com quantidade, forma de pagamento e valor</small></div>
+      <button class="btn out sm danger" id="fechaCaixa">Fechar caixa</button>
+    </div>
+    <div id="pItens"></div>
     <h4>Recebido por forma (mês)</h4><div id="pForma"></div>
   </section>
 
@@ -164,13 +177,6 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;st
     <div id="produtos"></div>
   </section>
 
-  <section id="repos" class="view hide">
-    <h1>Reposição</h1>
-    <p style="color:var(--mut);font-size:14px;margin:-8px 0 16px">Chegou mais produtos? Informe a quantidade e toque em Repor para somar ao estoque.</p>
-    <input class="search" id="buscaRep" placeholder="Buscar produto" type="search">
-    <div id="reposicao"></div>
-  </section>
-
   <section id="detalhe" class="view hide">
     <button class="back" id="voltar">← Voltar</button>
     <div class="head"><div class="av lg" id="dAv"></div><h2 id="dNome"></h2></div>
@@ -189,18 +195,18 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;st
 
 <button class="btn fab" id="fab" aria-label="Adicionar">+</button>
 
-<nav id="nav"><button data-v="painel" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Painel</button><button data-v="lista"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M16 4a4 4 0 010 8M22 21c0-3-2-5-4-5.5"/></svg>Clientes</button><button data-v="anot"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg>Anotações</button><button data-v="prods"><svg viewBox="0 0 24 24"><path d="M3 12l9-9h8v8l-9 9z"/><circle cx="15.5" cy="8.5" r="1.3"/></svg>Produtos</button><button data-v="repos"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0115-6.7L21 8M21 3v5h-5M21 12a9 9 0 01-15 6.7L3 16M3 21v-5h5"/></svg>Reposição</button></nav>
+<nav id="nav"><button data-v="painel" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Painel</button><button data-v="lista"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M16 4a4 4 0 010 8M22 21c0-3-2-5-4-5.5"/></svg>Clientes</button><button data-v="anot"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg>Anotações</button><button data-v="prods"><svg viewBox="0 0 24 24"><path d="M3 12l9-9h8v8l-9 9z"/><circle cx="15.5" cy="8.5" r="1.3"/></svg>Produtos</button></nav>
 
 <!-- Cliente -->
 <div class="ov" id="ovCliente"><form class="sheet" id="fCliente">
   <h3 id="tCliente">Novo cliente</h3>
   <div class="sec" style="margin-top:14px">Dados</div>
   <div class="field"><label>Nome</label><input id="cNome" required autocomplete="off"></div>
-  <div class="field"><label>Contato (telefone)</label><input id="cTel" type="tel" inputmode="tel" required placeholder="(11) 90000-0000"></div>
+  <div class="field"><label>Contato (telefone)</label><input id="cTel" type="tel" inputmode="numeric" required placeholder="(11)900000000"></div>
   <div class="field"><label>Endereço (opcional)</label><input id="cEnd" autocomplete="off"></div>
   <div class="sec">Documento (opcional)</div>
   <div class="seg" id="sgDoc" data-val="CPF"><button type="button" data-v="CPF" class="on">CPF</button><button type="button" data-v="RG">RG</button></div>
-  <div class="field" style="margin-top:10px"><input id="cDoc" placeholder="Número" inputmode="numeric" autocomplete="off"></div>
+  <div class="field" style="margin-top:10px"><input id="cDoc" placeholder="000.000.000-00" inputmode="numeric" autocomplete="off"></div>
   <div class="sec">Compra à vista · desconto (opcional)</div>
   <div class="seg" id="sgDesc" data-val="none"><button type="button" data-v="none" class="on">Sem desconto</button><button type="button" data-v="%">Porcentagem %</button><button type="button" data-v="R$">Valor R$</button></div>
   <div class="field hide" id="wDesc" style="margin-top:10px"><input id="cDescVal" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Valor do desconto"></div>
@@ -241,7 +247,7 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;st
     <div class="field hide" id="wND" style="margin-top:10px"><input id="nDescVal" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Valor do desconto"></div>
   </div>
   <div class="sec">Vencimento (opcional)</div>
-  <input id="nData" type="date">
+  <input id="nData" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" autocomplete="off">
   <div class="box" id="resumo"></div>
   <div class="row"><button type="button" class="btn out" data-close>Cancelar</button><button class="btn">Salvar nota</button></div>
 </form></div>
@@ -256,6 +262,7 @@ const DB = 'https://lorena-df029-default-rtdb.firebaseio.com';
 const $ = id => document.getElementById(id);
 const FORMAS = {dinheiro:'Dinheiro', pix:'PIX', cartao_vista:'Cartão à vista', cartao_parcelado:'Cartão parcelado', promissoria:'Nota promissória', outros:'Outros'};
 const VISTA = ['dinheiro', 'pix', 'cartao_vista'];
+const MAX_VENDAS = 20;
 let D = {clientes:{}, produtos:{}, pagamentos:{}, config:{}}, atual = null, aba = 'painel', filtro = 'todas', editCli = null, editProd = null, itensNota = [], notaAberta = null;
 
 const brl = v => Number(v || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
@@ -269,7 +276,25 @@ const inic = s => s.trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUp
 const calcDesc = (sub, d) => !d || !d.valor ? 0 : Math.min(sub, d.tipo === '%' ? sub * d.valor / 100 : d.valor);
 const descTxt = d => d.tipo === '%' ? `${d.valor}%` : brl(d.valor);
 const pagTxt = p => !p ? '' : p.forma === 'cartao_parcelado' && p.parcelas ? `Cartão ${p.parcelas}x` : p.forma === 'outros' && p.obs ? `Outros: ${p.obs}` : FORMAS[p.forma] || '';
+const formaTxt = (f, parc) => f === 'cartao_parcelado' && parc ? `Cartão ${parc}x` : FORMAS[f] || '';
+const dtBR = t => t ? new Date(t).toLocaleDateString('pt-BR') : '—';
 const zapNum = c => { let n = c.telefone.replace(/\D/g, ''); return n.length <= 11 ? '55' + n : n; };
+
+// ===== máscaras =====
+// (xx)xxxxxxxxx
+const maskTel = v => { const d = v.replace(/\D/g, '').slice(0, 11); return d.length <= 2 ? (d ? '(' + d : '') : `(${d.slice(0, 2)})${d.slice(2)}`; };
+// xxx.xxx.xxx-xx
+const maskCpf = v => v.replace(/\D/g, '').slice(0, 11).replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+// xx/xx/xxxx
+const maskData = v => v.replace(/\D/g, '').slice(0, 8).replace(/(\d{2})(\d)/, '$1/$2').replace(/(\d{2})\/(\d{2})(\d)/, '$1/$2/$3');
+// dd/mm/aaaa -> aaaa-mm-dd ('' se vazio, null se inválida)
+function dataISO(t) {
+  if (!t) return '';
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(t); if (!m) return null;
+  const d = new Date(+m[3], +m[2] - 1, +m[1]);
+  if (d.getFullYear() !== +m[3] || d.getMonth() !== +m[2] - 1 || d.getDate() !== +m[1]) return null;
+  return `${m[3]}-${m[2]}-${m[1]}`;
+}
 
 async function api(path, method = 'GET', body) {
   $('load').style.width = '70%';
@@ -287,7 +312,7 @@ async function carregar() {
   D = {clientes:d.clientes || {}, produtos:d.produtos || {}, pagamentos:d.pagamentos || {}, config:d.config || {}};
   render();
 }
-const render = () => { renderPainel(); renderLista(); renderAnot(); renderProdutos(); renderRepos(); if (atual) renderDetalhe(); };
+const render = () => { renderPainel(); renderLista(); renderAnot(); renderProdutos(); if (atual) renderDetalhe(); };
 const todasNotas = () => Object.entries(D.clientes).flatMap(([cid, c]) => Object.entries(c.notas || {}).map(([nid, n]) => ({cid, nid, cliente:c.nome, ...n})));
 const totalDe = c => Object.values(c.notas || {}).reduce((s, n) => s + Number(n.valor || 0), 0);
 const itensTxt = n => Array.isArray(n.itens) ? n.itens.map(i => `${i.qtd}x ${i.nome}`).join(', ') : n.itens;
@@ -314,7 +339,44 @@ function renderPainel() {
   const g = {}; pm.forEach(p => { const k = p.forma || 'nd'; g[k] = (g[k] || 0) + Number(p.valor); });
   const fa = Object.entries(g).sort((a, b) => b[1] - a[1]).map(([k, v]) => [FORMAS[k] || 'Não informado', v]);
   $('pForma').innerHTML = fa.length ? barras(fa, fa[0][1]) : '<div class="empty">Nenhum recebimento neste mês.</div>';
+  renderVendas();
 }
+
+// ===== itens vendidos / fechar caixa =====
+const ultimoFech = () => Number(D.config.caixa_fechado) || 0;
+// Junta os itens das notas já pagas (guardados em "pagamentos") e das notas em aberto.
+function itensVendidos() {
+  const f = ultimoFech(), out = [];
+  Object.values(D.pagamentos).forEach(p => {
+    if (!Array.isArray(p.itens) || (Number(p.data) || 0) <= f) return;
+    const cli = D.clientes[p.cliente], forma = formaTxt(p.forma, p.parcelas);
+    p.itens.forEach(i => out.push({nome:i.nome, qtd:i.qtd, valor:i.qtd * i.preco, cliente:cli ? cli.nome : 'Cliente removido', forma, data:p.data, pago:true}));
+  });
+  todasNotas().forEach(n => {
+    if (!Array.isArray(n.itens) || (Number(n.criado) || 0) <= f) return;
+    const forma = n.pagamento ? formaTxt(n.pagamento.forma, n.pagamento.parcelas) : '';
+    n.itens.forEach(i => out.push({nome:i.nome, qtd:i.qtd, valor:i.qtd * i.preco, cliente:n.cliente, forma, data:n.criado, pago:false}));
+  });
+  return out.sort((a, b) => (Number(b.data) || 0) - (Number(a.data) || 0));
+}
+function renderVendas() {
+  const f = ultimoFech();
+  $('pFech').textContent = 'Cada item com quantidade, forma de pagamento e valor' + (f ? ` · Último fechamento: ${dtBR(f)} ${new Date(f).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}` : '');
+  const v = itensVendidos().slice(0, MAX_VENDAS);
+  $('pItens').innerHTML = v.length ? v.map((i, k) => `<div class="venda" style="animation-delay:${Math.min(k, 10)*50}ms"><div class="t"><span>${esc(i.nome)}</span><span>${brl(i.valor)}</span></div><div><span class="chp">Qtd: ${Number(i.qtd) || 1}</span><span class="chp">${esc(i.forma || 'Pagamento não informado')}</span><span class="chp ${i.pago ? 'pg' : 'ab'}">${i.pago ? 'Pago' : 'Em aberto'}</span></div><small>${esc(i.cliente)} · ${dtBR(i.data)}</small></div>`).join('') : '<div class="empty">Nenhum item vendido ainda.</div>';
+}
+// Apaga os itens vendidos (das notas já pagas) e guarda o momento do fechamento.
+// Tudo numa única atualização do Firebase. Notas em aberto e valores recebidos não mudam.
+$('fechaCaixa').onclick = async e => {
+  const b = e.currentTarget;
+  if (!itensVendidos().length) return toast('Não há itens vendidos para fechar o caixa');
+  if (!confirm('Deseja fechar o caixa?\n\nTodos os itens vendidos serão apagados desta lista.\nOs valores recebidos e as notas em aberto não serão alterados.')) return;
+  const up = {'config/caixa_fechado': Date.now()};
+  Object.entries(D.pagamentos).forEach(([id, p]) => { if (p.itens) up[`pagamentos/${id}/itens`] = null; });
+  b.disabled = true;
+  try { await api('', 'PATCH', up); await carregar(); toast('Caixa fechado'); }
+  catch (err) { } finally { b.disabled = false; }
+};
 
 function renderLista() {
   const q = $('busca').value.trim().toLowerCase();
@@ -353,15 +415,10 @@ function renderProdutos() {
   const it = Object.entries(D.produtos).sort((a, b) => a[1].nome.localeCompare(b[1].nome));
   $('produtos').innerHTML = it.length ? it.map(([id, p], i) => `<div class="card" data-prod="${id}" style="animation-delay:${Math.min(i, 12)*45}ms"><div class="l"><div class="av">${esc(inic(p.nome))}</div><div style="min-width:0"><b>${esc(p.nome)}</b><small>Estoque: ${Number(p.quantidade) || 0}</small></div></div><span class="tag">${brl(p.preco)}</span></div>`).join('') : '<div class="empty">Nenhum produto ainda.<br>Toque em + para cadastrar.</div>';
 }
-function renderRepos() {
-  const q = $('buscaRep').value.trim().toLowerCase();
-  const it = Object.entries(D.produtos).filter(([, p]) => p.nome.toLowerCase().includes(q)).sort((a, b) => a[1].nome.localeCompare(b[1].nome));
-  $('reposicao').innerHTML = it.length ? it.map(([id, p], i) => `<div class="card rep" style="animation-delay:${Math.min(i, 12)*45}ms"><div class="l"><div class="av">${esc(inic(p.nome))}</div><div style="min-width:0"><b>${esc(p.nome)}</b><small>Estoque atual: ${Number(p.quantidade) || 0}</small></div></div><div class="r"><input type="number" min="1" step="1" value="1" inputmode="numeric" aria-label="Quantidade que chegou"><button class="btn sm" data-repor="${id}">+ Repor</button></div></div>`).join('') : `<div class="empty">${q ? 'Nenhum produto encontrado.' : 'Nenhum produto ainda.<br>Cadastre produtos na aba Produtos.'}</div>`;
-}
 
 // navegação do sistem
 function ir(v) {
-  ['painel', 'lista', 'anot', 'prods', 'repos', 'detalhe'].forEach(s => { const el = $(s), on = s === v; el.classList.toggle('hide', !on); if (on) { el.style.animation = 'none'; el.offsetHeight; el.style.animation = ''; } });
+  ['painel', 'lista', 'anot', 'prods', 'detalhe'].forEach(s => { const el = $(s), on = s === v; el.classList.toggle('hide', !on); if (on) { el.style.animation = 'none'; el.offsetHeight; el.style.animation = ''; } });
   aba = v === 'detalhe' ? 'lista' : v;
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === aba));
   $('fab').classList.toggle('hide', !['lista', 'prods'].includes(v));
@@ -376,7 +433,6 @@ document.addEventListener('click', async e => {
   if (t.closest('[data-close2]')) return fechar('ovDet');
   if (t.closest('[data-zapnota]')) return zapNota();
   const nav = t.closest('nav button'); if (nav) return ir(nav.dataset.v);
-  const rp = t.closest('[data-repor]'); if (rp) return repor(rp);
   const pg = t.closest('[data-pagar]'); if (pg) return pagar(pg);
   const a = t.closest('[data-abrir]'); if (a) { atual = a.dataset.abrir; renderDetalhe(); ir('detalhe'); atual = a.dataset.abrir; return; }
   const n = t.closest('[data-nota]'); if (n) { const [c, i] = n.dataset.nota.split('|'); return verNota(c, i); }
@@ -386,7 +442,23 @@ document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.close
 document.querySelectorAll('.ov').forEach(o => o.onclick = e => { if (e.target === o) o.classList.remove('on'); });
 $('voltar').onclick = () => ir('lista');
 $('busca').oninput = renderLista;
-$('buscaRep').oninput = renderRepos;
+
+// Campos numéricos: ao clicar, o 0 some (se não for 0, seleciona tudo).
+// Se sair do campo vazio, volta ao valor padrão.
+document.addEventListener('focusin', e => {
+  const t = e.target;
+  if (t.tagName !== 'INPUT' || t.type !== 'number') return;
+  if (t.value !== '' && parseFloat(t.value) === 0) t.value = ''; else t.select();
+});
+document.addEventListener('focusout', e => {
+  const t = e.target;
+  if (t.id === 'pdQtd' && t.value === '') t.value = 0;
+  if (t.id === 'nQtd' && t.value === '') t.value = 1;
+});
+
+// máscaras nos campos
+$('cTel').oninput = e => e.target.value = maskTel(e.target.value);
+$('nData').oninput = e => e.target.value = maskData(e.target.value);
 
 // selects
 const optFormas = vazio => (vazio ? '<option value="">Não definida</option>' : '') + Object.entries(FORMAS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
@@ -402,11 +474,11 @@ $('fab').onclick = () => {
 // pagina de Cliente
 $('sgDesc').onchange = () => $('wDesc').classList.toggle('hide', $('sgDesc').dataset.val === 'none');
 $('sgDoc').onchange = () => { $('cDoc').placeholder = $('sgDoc').dataset.val === 'CPF' ? '000.000.000-00' : 'Número do RG'; $('cDoc').dispatchEvent(new Event('input')); };
-$('cDoc').oninput = e => { if ($('sgDoc').dataset.val === 'CPF') e.target.value = e.target.value.replace(/\D/g, '').slice(0, 11).replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2'); };
+$('cDoc').oninput = e => { if ($('sgDoc').dataset.val === 'CPF') e.target.value = maskCpf(e.target.value); };
 $('editar').onclick = () => {
   const c = D.clientes[atual]; editCli = atual; $('tCliente').textContent = 'Editar cliente';
-  $('cNome').value = c.nome; $('cTel').value = c.telefone; $('cEnd').value = c.endereco || '';
-  setSeg('sgDoc', c.documento?.tipo || 'CPF'); $('cDoc').value = c.documento?.numero || '';
+  $('cNome').value = c.nome; $('cTel').value = maskTel(c.telefone || ''); $('cEnd').value = c.endereco || '';
+  setSeg('sgDoc', c.documento?.tipo || 'CPF'); $('cDoc').value = c.documento?.numero || ''; $('cDoc').dispatchEvent(new Event('input'));
   $('cDescVal').value = c.descontoVista?.valor ?? ''; setSeg('sgDesc', c.descontoVista?.tipo || 'none');
   $('cPag').value = c.pagamentoPadrao || ''; abrir('ovCliente');
 };
@@ -427,19 +499,6 @@ $('zap').onclick = () => open(`https://wa.me/${zapNum(D.clientes[atual])}`, '_bl
 $('produtos').onclick = e => { const c = e.target.closest('[data-prod]'); if (!c) return; const p = D.produtos[c.dataset.prod]; editProd = c.dataset.prod; $('tProd').textContent = 'Editar produto'; $('pdNome').value = p.nome; $('pdPreco').value = p.preco; $('pdQtd').value = Number(p.quantidade) || 0; $('delProd').classList.remove('hide'); abrir('ovProd'); };
 $('fProd').onsubmit = async e => { e.preventDefault(); const d = {nome:$('pdNome').value.trim(), preco:parseFloat($('pdPreco').value), quantidade:Math.max(0, parseInt($('pdQtd').value) || 0)}; if (editProd) await api(`produtos/${editProd}`, 'PATCH', d); else await api('produtos', 'POST', d); fechar('ovProd'); await carregar(); toast('Produto salvo'); };
 $('delProd').onclick = async () => { if (!confirm('Excluir este produto?')) return; await api(`produtos/${editProd}`, 'DELETE'); fechar('ovProd'); await carregar(); toast('Produto excluído'); };
-
-// Reposição: soma a quantidade que chegou ao estoque (lê o valor atual do servidor)
-async function repor(b) {
-  const id = b.dataset.repor, inp = b.closest('.rep').querySelector('input'), entrada = parseInt(inp.value);
-  if (!entrada || entrada < 1) return toast('Informe a quantidade que chegou');
-  b.disabled = true;
-  try {
-    const atual = Number(await api(`produtos/${id}/quantidade`)) || 0, nova = atual + entrada;
-    await api(`produtos/${id}`, 'PATCH', {quantidade:nova});
-    D.produtos[id].quantidade = nova; render();
-    toast(`+${entrada} em ${D.produtos[id].nome}. Estoque: ${nova}`);
-  } catch (e) { b.disabled = false; }
-}
 
 // Nota: cálculo
 function calc() {
@@ -476,12 +535,13 @@ $('addItem').onclick = () => {
 $('itens').onclick = e => { const b = e.target.closest('[data-rm]'); if (b) { itensNota.splice(b.dataset.rm, 1); resumo(); } };
 $('fNota').onsubmit = async e => {
   e.preventDefault(); if (!itensNota.length) return toast('Adicione ao menos um item');
+  const venc = dataISO($('nData').value.trim()); if (venc === null) return toast('Data inválida. Use dd/mm/aaaa');
   const r = calc(), f = $('nPag').value, pagamento = {forma:f};
   if (f === 'cartao_parcelado') pagamento.parcelas = +$('nParc').value;
   if (f === 'outros') pagamento.obs = $('nObs').value.trim();
   const numero = (Number(D.config.contador) || 0) + 1;
   await api('config/contador', 'PUT', numero);
-  await api(`clientes/${atual}/notas`, 'POST', {numero, itens:itensNota, subtotal:r.sub, desconto:r.desc > 0 ? {...r.dd, calc:r.desc} : null, valor:r.total, pagamento, vencimento:$('nData').value || '', criado:Date.now()});
+  await api(`clientes/${atual}/notas`, 'POST', {numero, itens:itensNota, subtotal:r.sub, desconto:r.desc > 0 ? {...r.dd, calc:r.desc} : null, valor:r.total, pagamento, vencimento:venc, criado:Date.now()});
   fechar('ovNota'); await carregar(); toast(`Nota ${num4(numero)} criada`);
 };
 
@@ -511,13 +571,16 @@ function zapNota() {
   open(`https://wa.me/${zapNum(c)}?text=${encodeURIComponent(t)}`, '_blank');
 }
 
-// Pagar: apaga a nota e registra o recebimento
+// Pagar: apaga a nota e registra o recebimento (guardando os itens para o painel)
 async function pagar(b) {
   const cid = b.dataset.cid, nid = b.dataset.pagar, n = D.clientes[cid].notas[nid], el = b.closest('.nota');
   b.disabled = true;
   if (el) { el.style.maxHeight = el.offsetHeight + 'px'; el.offsetHeight; el.classList.add('paid'); }
   fechar('ovDet');
-  await api('pagamentos', 'POST', {cliente:cid, valor:Number(n.valor), forma:n.pagamento?.forma || '', data:Date.now()});
+  const rec = {cliente:cid, valor:Number(n.valor), forma:n.pagamento?.forma || '', data:Date.now()};
+  if (Array.isArray(n.itens) && n.itens.length) rec.itens = n.itens;
+  if (n.pagamento?.parcelas) rec.parcelas = n.pagamento.parcelas;
+  await api('pagamentos', 'POST', rec);
   await api(`clientes/${cid}/notas/${nid}`, 'DELETE');
   toast('Nota paga e removida'); setTimeout(carregar, 550);
 }
