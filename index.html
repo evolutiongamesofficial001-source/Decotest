@@ -486,7 +486,7 @@ function preencherParcelas(f) {
     $('nParc').innerHTML = '<option value="1">Sem parcelar</option>' + Array.from({length:23}, (_, i) => `<option value="${i + 2}">${i + 2}x (${i + 2} meses)</option>`).join('');
   } else {
     $('lParc').textContent = 'Parcelar em quantas vezes?';
-    $('nParc').innerHTML = Array.from({length:11}, (_, i) => `<option value="${i + 2}">${i + 2}x</option>`).join('');
+    $('nParc').innerHTML = Array.from({length:23}, (_, i) => `<option value="${i + 2}">${i + 2}x</option>`).join('');
   }
   $('nParc').selectedIndex = f === 'promissoria' ? 1 : 0;
 }
