@@ -482,13 +482,13 @@ $('cPag').innerHTML = optFormas(true); $('nPag').innerHTML = optFormas();
 // Parcelas: cartão parcelado = 2x a 12x · nota promissória = sem parcelar ou 2x a 24x (uma por mês)
 function preencherParcelas(f) {
   if (f === 'promissoria') {
-    $('lParc').textContent = 'Parcelas (uma por mês)';
+    $('lParc').textContent = 'Em quantos meses será parcelado? (uma parcela por mês)';
     $('nParc').innerHTML = '<option value="1">Sem parcelar</option>' + Array.from({length:23}, (_, i) => `<option value="${i + 2}">${i + 2}x (${i + 2} meses)</option>`).join('');
   } else {
     $('lParc').textContent = 'Parcelar em quantas vezes?';
     $('nParc').innerHTML = Array.from({length:11}, (_, i) => `<option value="${i + 2}">${i + 2}x</option>`).join('');
   }
-  $('nParc').selectedIndex = 0;
+  $('nParc').selectedIndex = f === 'promissoria' ? 1 : 0;
 }
 // Número de parcelas da forma atual (0 = não se aplica)
 const parcelasNota = () => PARCELAVEL.includes($('nPag').value) ? (parseInt($('nParc').value) || 0) : 0;
