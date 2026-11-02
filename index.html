@@ -281,6 +281,10 @@ const pagTxt = p => !p ? '' : p.forma === 'cartao_parcelado' && p.parcelas ? `Ca
 const formaTxt = (f, parc) => f === 'cartao_parcelado' && parc ? `Cartão ${parc}x` : f === 'promissoria' && parc > 1 ? `Promissória ${parc}x` : FORMAS[f] || '';
 const dtBR = t => t ? new Date(t).toLocaleDateString('pt-BR') : '—';
 const zapNum = c => { let n = c.telefone.replace(/\D/g, ''); return n.length <= 11 ? '55' + n : n; };
+// Total original e vencimento-base (a nota guarda o original quando já há parcela paga)
+const totalNota = n => n.valorOriginal ?? n.valor;
+const baseVenc = n => n.vencInicial ?? n.vencimento ?? '';
+const parcPaga = (n, k) => !!(n.pagas && n.pagas['p' + k]);
 
 // ===== parcelas =====
 const pad2 = n => String(n).padStart(2, '0');
@@ -450,6 +454,7 @@ document.addEventListener('click', async e => {
   if (t.closest('[data-zapnota]')) return zapNota();
   const nav = t.closest('nav button'); if (nav) return ir(nav.dataset.v);
   const pg = t.closest('[data-pagar]'); if (pg) return pagar(pg);
+  const pp = t.closest('[data-pparc]'); if (pp) return pagarParcela(pp.dataset.cid, pp.dataset.nid, +pp.dataset.pparc);
   const a = t.closest('[data-abrir]'); if (a) { atual = a.dataset.abrir; renderDetalhe(); ir('detalhe'); atual = a.dataset.abrir; return; }
   const n = t.closest('[data-nota]'); if (n) { const [c, i] = n.dataset.nota.split('|'); return verNota(c, i); }
   const chip = t.closest('.chip'); if (chip) { filtro = chip.dataset.f; document.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === chip)); renderAnot(); }
@@ -557,25 +562,61 @@ $('novaNota').onclick = () => {
   $('nSel').onchange(); $('nPag').value = D.clientes[atual].pagamentoPadrao || 'dinheiro'; setSeg('sgND', 'none'); atualizaPag(true); abrir('ovNota');
 };
 $('addItem').onclick = () => {
-  const qtd = Math.max(1, parseInt($('nQtd').value) || 1); let nome, preco;
+  const qtd = Math.max(1, parseInt($('nQtd').value) || 1); let nome, preco, pid;
   if ($('nSel').value === '_') { nome = $('aNome').value.trim(); preco = parseFloat($('aPreco').value); if (!nome || isNaN(preco)) return toast('Informe nome e preço'); $('aNome').value = $('aPreco').value = ''; }
-  else { const p = D.produtos[$('nSel').value]; nome = p.nome; preco = Number(p.preco); }
-  itensNota.push({nome, preco, qtd}); $('nQtd').value = 1; resumo();
+  else { pid = $('nSel').value; const p = D.produtos[pid]; nome = p.nome; preco = Number(p.preco); }
+  itensNota.push({nome, preco, qtd, ...(pid ? {pid} : {})}); $('nQtd').value = 1; resumo();
 };
 $('itens').onclick = e => { const b = e.target.closest('[data-rm]'); if (b) { itensNota.splice(b.dataset.rm, 1); resumo(); } };
 $('fNota').onsubmit = async e => {
   e.preventDefault(); if (!itensNota.length) return toast('Adicione ao menos um item');
   const venc = dataISO($('nData').value.trim()); if (venc === null) return toast('Data inválida. Use dd/mm/aaaa');
+  // quantidade por produto cadastrado (para baixar o estoque)
+  const porProd = {};
+  itensNota.forEach(i => { if (i.pid && D.produtos[i.pid]) porProd[i.pid] = (porProd[i.pid] || 0) + i.qtd; });
+  const falta = Object.entries(porProd).filter(([id, q]) => q > (Number(D.produtos[id].quantidade) || 0)).map(([id]) => D.produtos[id].nome);
+  if (falta.length && !confirm(`Estoque insuficiente para: ${falta.join(', ')}.\nContinuar mesmo assim?`)) return;
   const r = calc(), f = $('nPag').value, pagamento = {forma:f}, parcelas = parcelasNota();
   if (parcelas > 1) pagamento.parcelas = parcelas;
   if (f === 'outros') pagamento.obs = $('nObs').value.trim();
   const numero = (Number(D.config.contador) || 0) + 1;
   await api('config/contador', 'PUT', numero);
   await api(`clientes/${atual}/notas`, 'POST', {numero, itens:itensNota, subtotal:r.sub, desconto:r.desc > 0 ? {...r.dd, calc:r.desc} : null, valor:r.total, pagamento, vencimento:venc, criado:Date.now()});
+  // reduz o estoque dos produtos vendidos
+  const up = {};
+  Object.entries(porProd).forEach(([id, q]) => { up[`produtos/${id}/quantidade`] = Math.max(0, (Number(D.produtos[id].quantidade) || 0) - q); });
+  if (Object.keys(up).length) await api('', 'PATCH', up);
   fechar('ovNota'); await carregar(); toast(`Nota ${num4(numero)} criada`);
 };
 
-// Detalhe da nota
+// Detalhe da nota: lista de parcelas, cada uma com botão para pagar
+function parcelasPagarHTML(cid, nid, n) {
+  const ps = listaParcelas(totalNota(n), n.pagamento.parcelas, baseVenc(n));
+  return `<div class="sec" style="margin:14px 0 4px">Parcelas</div>` + ps.map(x => {
+    const paga = parcPaga(n, x.n);
+    return `<div class="dl" style="align-items:center"><span>Parcela ${x.n}/${ps.length}${x.data ? ' · ' + dataBR(x.data) : ''}<br><small style="color:var(--mut)">${brl(x.valor)}</small></span>${paga ? '<span class="chp pg" style="margin:0">Paga</span>' : `<button class="btn out sm" data-pparc="${x.n}" data-cid="${cid}" data-nid="${nid}">Pagar</button>`}</div>`;
+  }).join('');
+}
+// Paga uma parcela: registra o recebimento e reduz o valor em aberto da nota
+async function pagarParcela(cid, nid, k) {
+  const n = D.clientes[cid].notas[nid], ps = listaParcelas(totalNota(n), n.pagamento.parcelas, baseVenc(n)), x = ps[k - 1];
+  if (!confirm(`Confirmar pagamento da parcela ${k}/${ps.length} (${brl(x.valor)})?`)) return;
+  const pagas = {...(n.pagas || {}), ['p' + k]: true};
+  const restantes = ps.filter(y => !pagas['p' + y.n]);
+  const ultima = !restantes.length;
+  const rec = {cliente:cid, valor: ultima ? Number(n.valor) : x.valor, forma:n.pagamento.forma || '', data:Date.now(), parcelas:ps.length, parcela:k};
+  if (ultima && Array.isArray(n.itens) && n.itens.length) rec.itens = n.itens;
+  await api('pagamentos', 'POST', rec);
+  if (ultima) await api(`clientes/${cid}/notas/${nid}`, 'DELETE');
+  else await api(`clientes/${cid}/notas/${nid}`, 'PATCH', {
+    pagas, valorOriginal: totalNota(n), vencInicial: baseVenc(n),
+    valor: Math.round((Number(n.valor) - x.valor) * 100) / 100,
+    vencimento: restantes[0].data || n.vencimento || ''
+  });
+  await carregar(); toast(ultima ? 'Última parcela paga. Nota quitada' : `Parcela ${k} paga`);
+  if (ultima) fechar('ovDet'); else verNota(cid, nid);
+}
+
 function verNota(cid, nid) {
   const c = D.clientes[cid], n = c.notas[nid]; notaAberta = {cid, nid};
   const itens = Array.isArray(n.itens) ? n.itens.map(i => `<div class="dl"><span>${i.qtd}x ${esc(i.nome)}</span><span>${brl(i.qtd * i.preco)}</span></div>`).join('') : `<div class="dl"><span>${esc(n.itens)}</span></div>`;
@@ -583,9 +624,10 @@ function verNota(cid, nid) {
   $('detBody').innerHTML = `<div class="nn"><span>NOTA ${n.numero ? num4(n.numero) : ''}</span></div><h3>${esc(c.nome)}</h3><div class="meta">Emitida em ${new Date(n.criado || Date.now()).toLocaleDateString('pt-BR')}</div>${itens}
     ${n.subtotal != null ? `<div class="dl"><span>Subtotal</span><span>${brl(n.subtotal)}</span></div>` : ''}
     ${n.desconto ? `<div class="dl"><span>Desconto (${descTxt(n.desconto)})</span><span>− ${brl(n.desconto.calc)}</span></div>` : ''}
-    <div class="dl big"><span>Total</span><span>${brl(n.valor)}</span></div>
+    <div class="dl big"><span>${n.valorOriginal ? 'Em aberto' : 'Total'}</span><span>${brl(n.valor)}</span></div>
+    ${n.valorOriginal ? `<div class="dl"><span>Total da nota</span><span>${brl(n.valorOriginal)}</span></div>` : ''}
     ${p ? `<div class="dl"><span>Pagamento</span><span>${esc(pagTxt(p))}</span></div>` : ''}
-    ${p && p.parcelas ? `<div class="dl"><span>Parcelas</span><span>${p.parcelas}x de ${brl(n.valor / p.parcelas)}</span></div>` + listaParcelasHTML(n.valor, p.parcelas, n.vencimento || '') : ''}
+    ${p && p.parcelas > 1 ? parcelasPagarHTML(cid, nid, n) : ''}
     <div class="dl"><span>Vencimento</span><span>${n.vencimento ? dataBR(n.vencimento) : '—'}</span></div>
     <div class="row" style="margin-top:20px"><button class="btn out" data-zapnota>WhatsApp</button><button class="btn" data-pagar="${nid}" data-cid="${cid}">Marcar como paga</button></div>
     <button class="link" data-close2>Fechar</button>`;
@@ -595,14 +637,15 @@ function zapNota() {
   const {cid, nid} = notaAberta, c = D.clientes[cid], n = c.notas[nid], p = n.pagamento;
   let t = `Olá, ${c.nome}! Segue sua nota ${n.numero ? num4(n.numero) : ''}:\n` + (Array.isArray(n.itens) ? n.itens.map(i => `• ${i.qtd}x ${i.nome} — ${brl(i.qtd * i.preco)}`).join('\n') : n.itens);
   if (n.desconto) t += `\nDesconto: − ${brl(n.desconto.calc)}`;
-  t += `\n*Total: ${brl(n.valor)}*`;
-  if (p) t += `\nPagamento: ${pagTxt(p)}${p.parcelas ? ` (${p.parcelas}x de ${brl(n.valor / p.parcelas)})` : ''}`;
-  if (p && p.parcelas > 1) t += '\n' + listaParcelas(n.valor, p.parcelas, n.vencimento || '').map(x => `${x.n}/${p.parcelas} — ${brl(x.valor)}${x.data ? ' · ' + dataBR(x.data) : ''}`).join('\n');
-  if (n.vencimento) t += `\nVencimento: ${dataBR(n.vencimento)}`;
+  t += `\n*Total: ${brl(totalNota(n))}*`;
+  if (n.valorOriginal) t += `\nEm aberto: ${brl(n.valor)}`;
+  if (p) t += `\nPagamento: ${pagTxt(p)}${p.parcelas ? ` (${p.parcelas}x de ${brl(totalNota(n) / p.parcelas)})` : ''}`;
+  if (p && p.parcelas > 1) t += '\n' + listaParcelas(totalNota(n), p.parcelas, baseVenc(n)).map(x => `${x.n}/${p.parcelas} — ${brl(x.valor)}${x.data ? ' · ' + dataBR(x.data) : ''}${parcPaga(n, x.n) ? ' ✔ paga' : ''}`).join('\n');
+  else if (n.vencimento) t += `\nVencimento: ${dataBR(n.vencimento)}`;
   open(`https://wa.me/${zapNum(c)}?text=${encodeURIComponent(t)}`, '_blank');
 }
 
-// Pagar: apaga a nota e registra o recebimento (guardando os itens para o painel)
+// Pagar: apaga a nota e registra o recebimento do que falta (guardando os itens para o painel)
 async function pagar(b) {
   const cid = b.dataset.cid, nid = b.dataset.pagar, n = D.clientes[cid].notas[nid], el = b.closest('.nota');
   b.disabled = true;
